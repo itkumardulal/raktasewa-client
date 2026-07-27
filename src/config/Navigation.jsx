@@ -1,6 +1,5 @@
 import React from "react";
 import DashboardIcon from "@mui/icons-material/Dashboard";
-import BarChartIcon from "@mui/icons-material/BarChart";
 import DescriptionIcon from "@mui/icons-material/Description";
 import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import BloodtypeIcon from "@mui/icons-material/Bloodtype";
@@ -9,14 +8,18 @@ import Diversity3Icon from "@mui/icons-material/Diversity3";
 import FilePresentIcon from "@mui/icons-material/FilePresent";
 import PendingActionsIcon from "@mui/icons-material/PendingActions";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
+import VolunteerActivismIcon from "@mui/icons-material/VolunteerActivism";
+import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+import ReportProblemIcon from "@mui/icons-material/ReportProblem";
+import NewReleasesIcon from "@mui/icons-material/NewReleases";
 
+/** Same segments / routes — icons & labels only refreshed for UX */
 export const NAVIGATION = [
-  { kind: "header", title: "Main items" },
+  { kind: "header", title: "Overview" },
 
-  // Dash­board — now a real path
   { segment: "", title: "Dashboard", icon: <DashboardIcon /> },
 
-  // ----- Blood-Donor group -----
+  { kind: "header", title: "Donors" },
   {
     segment: "/blood-donor",
     title: "Blood Donor",
@@ -29,23 +32,23 @@ export const NAVIGATION = [
         icon: <ListAltIcon />,
       },
       {
-        segment: "vi-donor-lists", // LIMITED BLOOD TYPE all the AB+ AND O- UNIVERSAL RECEIVER
+        segment: "vi-donor-lists",
         title: "VI Donor List",
         icon: <FilePresentIcon />,
       },
       {
-        segment: "pending-donors", // LIMITED BLOOD TYPE all the AB+ AND O- UNIVERSAL RECEIVER
+        segment: "pending-donors",
         title: "Pending Donors",
         icon: <PendingActionsIcon />,
       },
     ],
   },
 
-  // ----- Blood-Request group -----
+  { kind: "header", title: "Requests" },
   {
-    segment: "/blood-request", // parent segment
+    segment: "/blood-request",
     title: "Blood Request",
-    icon: <BarChartIcon />,
+    icon: <VolunteerActivismIcon />,
     children: [
       {
         segment: "all-requests",
@@ -55,24 +58,23 @@ export const NAVIGATION = [
       {
         segment: "new-requests",
         title: "New Request",
-        icon: <DescriptionIcon />,
+        icon: <NewReleasesIcon />,
       },
       {
         segment: "settled-requests",
         title: "Settled Request",
-        icon: <DescriptionIcon />,
+        icon: <AssignmentTurnedInIcon />,
       },
       {
         segment: "unsettled-requests",
         title: "Unsettled Request",
-        icon: <DescriptionIcon />,
+        icon: <ReportProblemIcon />,
       },
     ],
   },
 
-  // ----- History -----
+  { kind: "header", title: "Admin" },
   { segment: "organization", title: "Organization", icon: <Diversity3Icon /> },
-
   {
     segment: "user-accounts",
     title: "User Accounts",

@@ -3,23 +3,25 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppProvider } from "@toolpad/core/AppProvider";
 import { DashboardLayout } from "@toolpad/core/DashboardLayout";
 import { PageContainer } from "@toolpad/core/PageContainer";
-import { createTheme, useColorScheme } from "@mui/material/styles";
-import { IconButton, Tooltip, Stack } from "@mui/material";
+import { useColorScheme } from "@mui/material/styles";
+import {
+  IconButton,
+  Tooltip,
+  Stack,
+  Avatar,
+  Typography,
+  Box,
+  Chip,
+} from "@mui/material";
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
 import LogoutIcon from "@mui/icons-material/Logout";
+import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import { NAVIGATION } from "../config/Navigation";
 import { logoutService } from "../services/authService";
 import { useAuth } from "../contexts/AuthContext";
+import adminTheme, { adminColors } from "../theme/adminTheme";
 
-/* ---------- theme ---------- */
-const demoTheme = createTheme({
-  colorSchemes: { light: true, dark: true },
-  cssVariables: { colorSchemeSelector: "class" },
-  breakpoints: { values: { xs: 0, sm: 600, md: 600, lg: 1200, xl: 1536 } },
-});
-
-/* ---------- helper: router adapter ---------- */
 function useToolpadRouter() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -33,56 +35,94 @@ function useToolpadRouter() {
   );
 }
 
-/* ---------- tiny dark / light switch ---------- */
 function ModeToggle() {
   const { mode, setMode } = useColorScheme();
-
   const handleToggle = () => setMode(mode === "dark" ? "light" : "dark");
 
   return (
-    <Tooltip title="Toggle light / dark">
-      <IconButton color="inherit" onClick={handleToggle}>
+    <Tooltip title="Toggle theme">
+      <IconButton color="inherit" onClick={handleToggle} size="small">
         {mode === "dark" ? <Brightness7Icon /> : <Brightness4Icon />}
       </IconButton>
     </Tooltip>
   );
 }
 
-/* ---------- logout button ---------- */
 function LogoutButton() {
   const navigate = useNavigate();
-  const { logout } = useAuth(); // flips context → "unauth" (optional)
+  const { logout } = useAuth();
 
   const handleLogout = async () => {
     try {
-      await logoutService(); // ① ask the server to clear the cookie
-      logout(); // ② reset context (if you use it)
+      await logoutService();
+      logout();
     } catch (err) {
       console.error(err.message);
     }
-    navigate("/signin", { replace: true }); // ③ send user to sign-in
+    navigate("/signin", { replace: true });
   };
 
   return (
     <Tooltip title="Sign out">
-      <IconButton color="inherit" onClick={handleLogout}>
+      <IconButton color="inherit" onClick={handleLogout} size="small">
         <LogoutIcon />
       </IconButton>
     </Tooltip>
   );
 }
 
-/* ---------- combined toolbar actions ---------- */
 function ToolbarActions() {
+  const { user } = useAuth();
+  const initial = (user?.email || "A").charAt(0).toUpperCase();
+
   return (
     <Stack direction="row" spacing={1} alignItems="center">
+      <Chip
+        size="small"
+        label="Live"
+        color="success"
+        variant="outlined"
+        sx={{ display: { xs: "none", sm: "inline-flex" }, height: 24 }}
+      />
+      <Tooltip title="Notifications">
+        <IconButton color="inherit" size="small">
+          <NotificationsNoneIcon />
+        </IconButton>
+      </Tooltip>
       <ModeToggle />
+      <Box
+        sx={{
+          display: { xs: "none", md: "flex" },
+          alignItems: "center",
+          gap: 1,
+          pl: 0.5,
+        }}
+      >
+        <Avatar
+          sx={{
+            width: 32,
+            height: 32,
+            bgcolor: adminColors.primary,
+            fontSize: 14,
+            fontWeight: 700,
+          }}
+        >
+          {initial}
+        </Avatar>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="caption" sx={{ display: "block", lineHeight: 1.2, fontWeight: 700 }}>
+            {user?.email || "Admin"}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+            {user?.role || "admin"}
+          </Typography>
+        </Box>
+      </Box>
       <LogoutButton />
     </Stack>
   );
 }
 
-/* ---------- main layout ---------- */
 export default function MainLayout() {
   const router = useToolpadRouter();
 
@@ -90,47 +130,49 @@ export default function MainLayout() {
     <AppProvider
       navigation={NAVIGATION}
       router={router}
-      theme={demoTheme}
+      theme={adminTheme}
       branding={{
         logo: (
-          <div
-            style={{
+          <Box
+            sx={{
               display: "flex",
               alignItems: "center",
-              flexWrap: "wrap",
-              gap: "0.5rem",
+              gap: 1,
               maxWidth: "100%",
             }}
           >
-            <img
+            <Box
+              component="img"
               src="/logo.png"
               alt="EBSSS logo"
-              style={{ height: "28px", width: "auto", flexShrink: 0 }}
+              sx={{ height: 28, width: "auto", flexShrink: 0, borderRadius: 1 }}
             />
-            <span
-              style={{
-                fontSize: "13px",
-                fontWeight: 600,
-                color: "#1976d2",
+            <Typography
+              sx={{
+                fontSize: { xs: 12, sm: 13 },
+                fontWeight: 700,
+                color: adminColors.primary,
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                maxWidth: "100%", // full width by default
+                letterSpacing: "-0.01em",
               }}
-              className="app-title"
             >
-              Emergency Blood Supply Support System
-            </span>
-          </div>
+              Emergency Blood Supply
+            </Typography>
+          </Box>
         ),
         title: "",
         homeUrl: "/",
       }}
     >
-      <DashboardLayout
-        slots={{ toolbarActions: ToolbarActions }} /* right-corner buttons */
-      >
-        <PageContainer>
+      <DashboardLayout slots={{ toolbarActions: ToolbarActions }}>
+        <PageContainer
+          sx={{
+            maxWidth: "100% !important",
+            "& .MuiStack-root": { maxWidth: "100%" },
+          }}
+        >
           <Outlet />
         </PageContainer>
       </DashboardLayout>
