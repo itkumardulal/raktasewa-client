@@ -1,6 +1,7 @@
 // src/contexts/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
-import api from "../lib/axiosInstance";
+import api, { setStoredToken } from "../lib/axiosInstance";
+import { logoutService } from "../services/authService";
 
 const AuthCtx = createContext();
 
@@ -13,13 +14,16 @@ export function AuthProvider({ children }) {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await api.get("/auth/user"); // cookie sent automatically
+        const { data } = await api.get("/auth/user");
         if (!cancelled) {
           setUser(data);
           setStatus("ok");
         }
       } catch {
-        if (!cancelled) setStatus("unauth");
+        if (!cancelled) {
+          setStoredToken(null);
+          setStatus("unauth");
+        }
       }
     })();
     return () => {
@@ -27,7 +31,6 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  /* --------  helpers called by UI  -------- */
   const login = (userPayload) => {
     setUser(userPayload);
     setStatus("ok");
@@ -37,8 +40,7 @@ export function AuthProvider({ children }) {
     try {
       await logoutService();
     } catch {
-      // single network call
-      /* ignore network errors */
+      setStoredToken(null);
     }
     setUser(null);
     setStatus("unauth");
