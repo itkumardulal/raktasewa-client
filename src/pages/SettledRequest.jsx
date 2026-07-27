@@ -6,17 +6,26 @@ import {
   Alert,
   TextField,
   Typography,
+  IconButton,
+  Stack,
 } from "@mui/material";
-import WhatsAppIcon from "@mui/icons-material/WhatsApp"; // import this at the top
+import ChatIcon from "@mui/icons-material/Chat";
 import { DataGrid } from "@mui/x-data-grid";
 import { fetchSettledRequests } from "../services/settleService";
 import dayjs from "dayjs";
+import ContactActionsDialog, {
+  ContactQuickButtons,
+  contactsFromRequest,
+  contextFromRequest,
+} from "../components/ContactActions";
+import { DEFAULT_CONTACT_MESSAGE } from "../constants/contactTemplates";
 
 const SettledRequest = () => {
   const [settled, setSettled] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchText, setSearchText] = useState("");
+  const [contactRow, setContactRow] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -27,7 +36,7 @@ const SettledRequest = () => {
         } else {
           setError("Failed to fetch settled requests");
         }
-      } catch (err) {
+      } catch {
         setError("Server error. Please try again.");
       } finally {
         setLoading(false);
@@ -47,76 +56,72 @@ const SettledRequest = () => {
     );
   });
 
-  const handleWhatsApp = (phone_number) => {
-    const phoneNumber = phone_number;
-
-    if (!phoneNumber) {
-      alert("Phone number is missing.");
-      return;
-    }
-
-    const cleanNumber = phoneNumber.replace(/[^0-9]/g, "");
-
-    window.open(
-      `https://wa.me/${cleanNumber}?text=${encodeURIComponent(
-        "Hi! We are contacting you regarding a blood donation request."
-      )}`,
-      "_blank"
-    );
-  };
-
   const columns = [
     { field: "settled_id", headerName: "ID", width: 70 },
-
-    { field: "patient_name", headerName: "Patient", width: 200 },
-    { field: "patient_blood_group", headerName: "Blood Group", width: 120 },
+    { field: "patient_name", headerName: "Patient", width: 160 },
+    { field: "patient_blood_group", headerName: "Blood Group", width: 110 },
     {
       field: "requester_name",
       headerName: "Requester",
-      minWidth: 150,
+      minWidth: 130,
     },
     {
       field: "requester_phone",
-      headerName: "Requester Phone",
-      width: 250,
+      headerName: "Requester",
+      width: 150,
+      sortable: false,
       renderCell: (params) => (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <span>{params.value}</span>
-          <WhatsAppIcon
-            fontSize="small"
-            color="success"
-            sx={{ cursor: "pointer" }}
-            onClick={() => handleWhatsApp(params.value)}
-          />
-        </Box>
+        <ContactQuickButtons
+          phone={params.value}
+          name={params.row.requester_name}
+          role="Requester / Receiver"
+          context={contextFromRequest(params.row)}
+          defaultMessage={DEFAULT_CONTACT_MESSAGE}
+        />
       ),
     },
-    { field: "donor_name", headerName: "Donor", width: 200 },
-    { field: "donor_blood_group", headerName: "Donor Group", width: 120 },
+    { field: "donor_name", headerName: "Donor", width: 150 },
+    { field: "donor_blood_group", headerName: "Donor Group", width: 110 },
     {
       field: "donor_phone",
-      headerName: "Donor Phone",
-      width: 250,
+      headerName: "Donor",
+      width: 150,
+      sortable: false,
       renderCell: (params) => (
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <span>{params.value}</span>
-          <WhatsAppIcon
-            fontSize="small"
-            color="success"
-            sx={{ cursor: "pointer" }}
-            onClick={() => handleWhatsApp(params.value)}
-          />
-        </Box>
+        <ContactQuickButtons
+          phone={params.value}
+          name={params.row.donor_name}
+          role="Donor"
+          context={contextFromRequest(params.row)}
+          defaultMessage={DEFAULT_CONTACT_MESSAGE}
+        />
       ),
     },
     {
-      field: "settled_at", // must match the actual key exactly
+      field: "settled_at",
       headerName: "Settled At",
       width: 180,
       valueFormatter: (params) => {
         const val = params;
         return val ? dayjs(val).format("MMM D, YYYY h:mm A") : "N/A";
       },
+    },
+    {
+      field: "actions",
+      headerName: "Message",
+      width: 90,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => (
+        <IconButton
+          size="small"
+          color="secondary"
+          aria-label="contact both"
+          onClick={() => setContactRow(params.row)}
+        >
+          <ChatIcon fontSize="inherit" />
+        </IconButton>
+      ),
     },
   ];
 
@@ -150,19 +155,25 @@ const SettledRequest = () => {
         ) : error ? (
           <Alert severity="error">{error}</Alert>
         ) : (
-          <Paper elevation={3} sx={{ width: "100%", height: 600 }}>
-            <DataGrid
-              rows={filteredRows}
-              columns={columns}
-              getRowId={(row) => row.settled_id}
-              pageSize={5}
-              rowsPerPageOptions={[5, 10, 20]}
-              disableSelectionOnClick
-              pagination
-            />
-          </Paper>
+          <DataGrid
+            rows={filteredRows}
+            columns={columns}
+            getRowId={(row) => row.settled_id}
+            pageSize={5}
+            rowsPerPageOptions={[5, 10, 20]}
+            disableSelectionOnClick
+            pagination
+          />
         )}
       </Paper>
+
+      <ContactActionsDialog
+        open={Boolean(contactRow)}
+        onClose={() => setContactRow(null)}
+        contacts={contactsFromRequest(contactRow)}
+        context={contextFromRequest(contactRow)}
+        title="Contact requester & donor"
+      />
     </Box>
   );
 };

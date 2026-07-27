@@ -19,7 +19,7 @@ import { DataGrid } from "@mui/x-data-grid";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import ChatIcon from "@mui/icons-material/Chat";
 import {
   deleteDonor,
   fetchDonors,
@@ -28,6 +28,11 @@ import {
   // updateDonorStatus,
 } from "../services/donorService";
 import { DONOR_STATUSES } from "../constants/constants";
+import ContactActionsDialog, {
+  ContactQuickButtons,
+  contactsFromDonor,
+} from "../components/ContactActions";
+import { DEFAULT_CONTACT_MESSAGE } from "../constants/contactTemplates";
 
 const columns = [
   { field: "id", headerName: "ID", width: 70 },
@@ -38,8 +43,8 @@ const columns = [
   { field: "phone_number", headerName: "Phone Number", width: 150 },
   {
     field: "whatsapp",
-    headerName: "WhatsApp",
-    width: 120,
+    headerName: "Contact",
+    width: 150,
     sortable: false,
     filterable: false,
     renderCell: (params) => params.value,
@@ -96,27 +101,10 @@ export default function DonorListPage() {
   const [searchText, setSearchText] = useState("");
 
   const [openEditRow, setOpenEditRow] = useState(null);
+  const [contactRow, setContactRow] = useState(null);
 
   const handleView = (row) => setOpenRow(row);
   const handleClose = () => setOpenRow(null);
-
-  const handleWhatsApp = (row) => {
-    const phoneNumber = row.phone_number;
-
-    if (!phoneNumber) {
-      alert("Phone number is missing.");
-      return;
-    }
-
-    const cleanNumber = phoneNumber.replace(/[^0-9]/g, "");
-
-    window.open(
-      `https://wa.me/${cleanNumber}?text=${encodeURIComponent(
-        "Hi! We are contacting you regarding a blood donation request."
-      )}`,
-      "_blank"
-    );
-  };
 
   useEffect(() => {
     (async () => {
@@ -158,17 +146,24 @@ export default function DonorListPage() {
         >
           <DeleteIcon fontSize="inherit" />
         </IconButton>
+        <IconButton
+          size="small"
+          color="secondary"
+          aria-label="contact"
+          onClick={() => setContactRow(donor)}
+        >
+          <ChatIcon fontSize="inherit" />
+        </IconButton>
       </Fragment>
     ),
     whatsapp: (
-      <IconButton
-        size="small"
-        color="success"
-        onClick={() => handleWhatsApp(donor)}
-        aria-label="whatsapp"
-      >
-        <WhatsAppIcon fontSize="inherit" />
-      </IconButton>
+      <ContactQuickButtons
+        phone={donor.phone_number}
+        name={donor.fullname}
+        role="Donor"
+        defaultMessage={DEFAULT_CONTACT_MESSAGE}
+        context={{ bloodGroup: donor.blood_group, status: donor.status }}
+      />
     ),
   }));
 
@@ -458,6 +453,18 @@ export default function DonorListPage() {
           </Box>
         )}
       </Dialog>
+
+      <ContactActionsDialog
+        open={Boolean(contactRow)}
+        onClose={() => setContactRow(null)}
+        contacts={contactsFromDonor(contactRow)}
+        context={{
+          bloodGroup: contactRow?.blood_group,
+          status: contactRow?.status,
+          patientName: contactRow?.fullname,
+        }}
+        title="Contact donor"
+      />
     </Box>
   );
 }

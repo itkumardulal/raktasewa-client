@@ -20,36 +20,25 @@ import { fetchRequests } from "../services/requestService";
 import AsyncDonorSelect from "../components/AsyncDonorSelect";
 import { settleRequest } from "../services/settleService";
 import Swal from "sweetalert2";
-import WhatsAppIcon from "@mui/icons-material/WhatsApp"; // import this at the top
+import ChatIcon from "@mui/icons-material/Chat";
+import ContactActionsDialog, {
+  ContactQuickButtons,
+  contactsFromRequest,
+  contextFromRequest,
+} from "../components/ContactActions";
+import { DEFAULT_CONTACT_MESSAGE } from "../constants/contactTemplates";
 
 export default function AllRequestList() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openRow, setOpenRow] = useState(null);
+  const [contactRow, setContactRow] = useState(null);
   const [error, setError] = useState(null);
   const [searchText, setSearchText] = useState("");
   const [confirmingId, setConfirmingId] = useState(null); // loading state for per-row confirm
 
   const handleView = (row) => setOpenRow(row);
   const handleClose = () => setOpenRow(null);
-
-  const handleWhatsApp = (phone_number) => {
-    const phoneNumber = phone_number;
-
-    if (!phoneNumber) {
-      alert("Phone number is missing.");
-      return;
-    }
-
-    const cleanNumber = phoneNumber.replace(/[^0-9]/g, "");
-
-    window.open(
-      `https://wa.me/${cleanNumber}?text=${encodeURIComponent(
-        "Hi! We are contacting you regarding a blood donation request."
-      )}`,
-      "_blank"
-    );
-  };
 
   useEffect(() => {
     (async () => {
@@ -120,16 +109,18 @@ export default function AllRequestList() {
     // { field: "requester_phone", headerName: "Phone", width: 150 },
     {
       field: "requester_phone",
-      headerName: "Requester Phone",
-      width: 250,
+      headerName: "Contact",
+      width: 200,
+      sortable: false,
       renderCell: (params) => (
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <span>{params.value}</span>
-          <WhatsAppIcon
-            fontSize="small"
-            color="success"
-            sx={{ cursor: "pointer" }}
-            onClick={() => handleWhatsApp(params.value)}
+          <span style={{ fontSize: 12 }}>{params.value}</span>
+          <ContactQuickButtons
+            phone={params.value}
+            name={params.row.requester_name}
+            role="Requester / Receiver"
+            context={contextFromRequest(params.row)}
+            defaultMessage={DEFAULT_CONTACT_MESSAGE}
           />
         </Box>
       ),
@@ -174,17 +165,27 @@ export default function AllRequestList() {
     {
       field: "actions",
       headerName: "Actions",
-      width: 100,
+      width: 120,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
-        <IconButton
-          size="small"
-          onClick={() => handleView(params.row)}
-          aria-label="view"
-        >
-          <VisibilityIcon fontSize="inherit" />
-        </IconButton>
+        <>
+          <IconButton
+            size="small"
+            onClick={() => handleView(params.row)}
+            aria-label="view"
+          >
+            <VisibilityIcon fontSize="inherit" />
+          </IconButton>
+          <IconButton
+            size="small"
+            color="secondary"
+            onClick={() => setContactRow(params.row)}
+            aria-label="contact"
+          >
+            <ChatIcon fontSize="inherit" />
+          </IconButton>
+        </>
       ),
     },
   ];
@@ -262,9 +263,24 @@ export default function AllRequestList() {
           </DialogContent>
         )}
         <DialogActions>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={() => setContactRow(openRow)}
+          >
+            Contact
+          </Button>
           <Button onClick={handleClose}>Close</Button>
         </DialogActions>
       </Dialog>
+
+      <ContactActionsDialog
+        open={Boolean(contactRow)}
+        onClose={() => setContactRow(null)}
+        contacts={contactsFromRequest(contactRow)}
+        context={contextFromRequest(contactRow)}
+        title="Contact requester / donor"
+      />
     </Box>
   );
 }

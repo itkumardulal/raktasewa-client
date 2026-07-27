@@ -1,4 +1,4 @@
-/* src/pages/NewRequestList.jsx */
+/* src/pages/UnSettledRequest.jsx */
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -12,72 +12,24 @@ import {
   Typography,
   CircularProgress,
   Alert,
+  Stack,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import ChatIcon from "@mui/icons-material/Chat";
 import { fetchUnSettledRequests } from "../services/unsettledService";
-import WhatsAppIcon from "@mui/icons-material/WhatsApp"; // import this at the top
-
-const handleWhatsApp = (phone_number) => {
-  const phoneNumber = phone_number;
-
-  if (!phoneNumber) {
-    alert("Phone number is missing.");
-    return;
-  }
-
-  const cleanNumber = phoneNumber.replace(/[^0-9]/g, "");
-
-  window.open(
-    `https://wa.me/${cleanNumber}?text=${encodeURIComponent(
-      "Hi! We are contacting you regarding a blood donation request."
-    )}`,
-    "_blank"
-  );
-};
-
-const columns = [
-  { field: "id", headerName: "ID", width: 70 },
-  { field: "patient_name", headerName: "Patient Name", flex: 1, minWidth: 150 },
-  { field: "patient_blood_group", headerName: "Blood Group", width: 120 },
-  {
-    field: "status",
-    headerName: "Status",
-    flex: 1,
-    minWidth: 150,
-    valueFormatter: (params) => (params || "").toUpperCase(),
-  },
-  { field: "requester_name", headerName: "Requester", flex: 1, minWidth: 150 },
-  {
-    field: "requester_phone",
-    headerName: "Requester Phone",
-    width: 250,
-    renderCell: (params) => (
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-        <span>{params.value}</span>
-        <WhatsAppIcon
-          fontSize="small"
-          color="success"
-          sx={{ cursor: "pointer" }}
-          onClick={() => handleWhatsApp(params.value)}
-        />
-      </Box>
-    ),
-  },
-  {
-    field: "actions",
-    headerName: "Actions",
-    width: 100,
-    sortable: false,
-    filterable: false,
-    renderCell: (params) => params.value,
-  },
-];
+import ContactActionsDialog, {
+  ContactQuickButtons,
+  contactsFromRequest,
+  contextFromRequest,
+} from "../components/ContactActions";
+import { DEFAULT_CONTACT_MESSAGE } from "../constants/contactTemplates";
 
 export default function UnSettledRequest() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openRow, setOpenRow] = useState(null);
+  const [contactRow, setContactRow] = useState(null);
   const [error, setError] = useState(null);
 
   const handleView = (row) => setOpenRow(row);
@@ -92,7 +44,7 @@ export default function UnSettledRequest() {
         } else {
           setError("Failed to load blood requests");
         }
-      } catch (err) {
+      } catch {
         setError("Server error. Please try again.");
       } finally {
         setLoading(false);
@@ -100,16 +52,63 @@ export default function UnSettledRequest() {
     })();
   }, []);
 
+  const columns = [
+    { field: "id", headerName: "ID", width: 70 },
+    { field: "patient_name", headerName: "Patient Name", flex: 1, minWidth: 150 },
+    { field: "patient_blood_group", headerName: "Blood Group", width: 120 },
+    {
+      field: "status",
+      headerName: "Status",
+      flex: 1,
+      minWidth: 120,
+      valueFormatter: (params) => (params || "").toUpperCase(),
+    },
+    { field: "requester_name", headerName: "Requester", flex: 1, minWidth: 140 },
+    {
+      field: "requester_phone",
+      headerName: "Contact",
+      width: 160,
+      sortable: false,
+      renderCell: (params) => (
+        <ContactQuickButtons
+          phone={params.value}
+          name={params.row.requester_name}
+          role="Requester / Receiver"
+          context={contextFromRequest(params.row)}
+          defaultMessage={DEFAULT_CONTACT_MESSAGE}
+        />
+      ),
+    },
+    {
+      field: "actions",
+      headerName: "Actions",
+      width: 120,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => params.value,
+    },
+  ];
+
   const rowsWithActions = requests.map((request) => ({
     ...request,
     actions: (
-      <IconButton
-        size="small"
-        onClick={() => handleView(request)}
-        aria-label="view"
-      >
-        <VisibilityIcon fontSize="inherit" />
-      </IconButton>
+      <Stack direction="row" spacing={0}>
+        <IconButton
+          size="small"
+          onClick={() => handleView(request)}
+          aria-label="view"
+        >
+          <VisibilityIcon fontSize="inherit" />
+        </IconButton>
+        <IconButton
+          size="small"
+          color="secondary"
+          onClick={() => setContactRow(request)}
+          aria-label="contact"
+        >
+          <ChatIcon fontSize="inherit" />
+        </IconButton>
+      </Stack>
     ),
   }));
 
@@ -141,7 +140,6 @@ export default function UnSettledRequest() {
         )}
       </Paper>
 
-      {/* View Modal */}
       <Dialog
         open={Boolean(openRow)}
         onClose={handleClose}
@@ -154,16 +152,33 @@ export default function UnSettledRequest() {
             {Object.entries(openRow).map(([key, val]) =>
               key !== "actions" ? (
                 <Typography key={key} sx={{ mb: 1 }}>
-                  <strong>{key.replace(/_/g, " ")}:</strong> {val}
+                  <strong>{key.replace(/_/g, " ")}:</strong> {String(val)}
                 </Typography>
               ) : null
             )}
           </DialogContent>
         )}
         <DialogActions>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={() => {
+              setContactRow(openRow);
+            }}
+          >
+            Contact
+          </Button>
           <Button onClick={handleClose}>Close</Button>
         </DialogActions>
       </Dialog>
+
+      <ContactActionsDialog
+        open={Boolean(contactRow)}
+        onClose={() => setContactRow(null)}
+        contacts={contactsFromRequest(contactRow)}
+        context={contextFromRequest(contactRow)}
+        title="Contact requester"
+      />
     </Box>
   );
 }
