@@ -12,12 +12,20 @@ import VolunteerActivismIcon from "@mui/icons-material/VolunteerActivism";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import ReportProblemIcon from "@mui/icons-material/ReportProblem";
 import NewReleasesIcon from "@mui/icons-material/NewReleases";
+import HourglassTopIcon from "@mui/icons-material/HourglassTop";
+import AssessmentIcon from "@mui/icons-material/Assessment";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
 
 /** Same segments / routes — icons & labels only refreshed for UX */
 export const NAVIGATION = [
   { kind: "header", title: "Overview" },
 
   { segment: "", title: "Dashboard", icon: <DashboardIcon /> },
+  {
+    segment: "how-it-works",
+    title: "How it works (Manual)",
+    icon: <MenuBookIcon />,
+  },
 
   { kind: "header", title: "Donors" },
   {
@@ -41,6 +49,11 @@ export const NAVIGATION = [
         title: "Pending Donors",
         icon: <PendingActionsIcon />,
       },
+      {
+        segment: "assigned-donors",
+        title: "Assigned Donors",
+        icon: <HourglassTopIcon />,
+      },
     ],
   },
 
@@ -57,7 +70,7 @@ export const NAVIGATION = [
       },
       {
         segment: "new-requests",
-        title: "New Request",
+        title: "New Request (3 days)",
         icon: <NewReleasesIcon />,
       },
       {
@@ -71,6 +84,13 @@ export const NAVIGATION = [
         icon: <ReportProblemIcon />,
       },
     ],
+  },
+
+  { kind: "header", title: "Insights" },
+  {
+    segment: "reports",
+    title: "Reports & Export",
+    icon: <AssessmentIcon />,
   },
 
   { kind: "header", title: "Admin" },

@@ -16,11 +16,11 @@ import {
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
 import LogoutIcon from "@mui/icons-material/Logout";
-import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import { NAVIGATION } from "../config/Navigation";
 import { logoutService } from "../services/authService";
 import { useAuth } from "../contexts/AuthContext";
 import adminTheme, { adminColors } from "../theme/adminTheme";
+import NotificationBell from "../components/NotificationBell";
 
 function useToolpadRouter() {
   const location = useLocation();
@@ -84,11 +84,7 @@ function ToolbarActions() {
         variant="outlined"
         sx={{ display: { xs: "none", sm: "inline-flex" }, height: 24 }}
       />
-      <Tooltip title="Notifications">
-        <IconButton color="inherit" size="small">
-          <NotificationsNoneIcon />
-        </IconButton>
-      </Tooltip>
+      <NotificationBell />
       <ModeToggle />
       <Box
         sx={{

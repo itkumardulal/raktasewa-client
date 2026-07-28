@@ -27,6 +27,10 @@ import ContactActionsDialog, {
 } from "../components/ContactActions";
 import UnsettledMatchPanel from "../components/UnsettledMatchPanel";
 import { DEFAULT_CONTACT_MESSAGE } from "../constants/contactTemplates";
+import { sortByLatest } from "../utils/exportData";
+import AsyncDonorSelect from "../components/AsyncDonorSelect";
+import { settleRequest } from "../services/settleService";
+import Swal from "sweetalert2";
 
 export default function UnSettledRequest() {
   const [requests, setRequests] = useState([]);
@@ -34,26 +38,54 @@ export default function UnSettledRequest() {
   const [openRow, setOpenRow] = useState(null);
   const [contactRow, setContactRow] = useState(null);
   const [error, setError] = useState(null);
+  const [selectedById, setSelectedById] = useState({});
+  const [confirmingId, setConfirmingId] = useState(null);
 
   const handleView = (row) => setOpenRow(row);
   const handleClose = () => setOpenRow(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetchUnSettledRequests();
-        if (res.success && Array.isArray(res.requests)) {
-          setRequests(res.requests);
-        } else {
-          setError("Failed to load blood requests");
-        }
-      } catch {
-        setError("Server error. Please try again.");
-      } finally {
-        setLoading(false);
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchUnSettledRequests();
+      if (res.success && Array.isArray(res.requests)) {
+        setRequests(sortByLatest(res.requests, "created_at"));
+      } else {
+        setError("Failed to load blood requests");
       }
-    })();
+    } catch {
+      setError("Server error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
   }, []);
+
+  const handleConfirm = async (row) => {
+    const donor = selectedById[row.id];
+    if (!donor?.id) {
+      Swal.fire({ icon: "error", title: "Select a donor first" });
+      return;
+    }
+    setConfirmingId(row.id);
+    try {
+      await settleRequest({ request: { id: row.id }, donor: { id: donor.id } });
+      await Swal.fire({ icon: "success", title: "Request settled" });
+      await load();
+    } catch (err) {
+      Swal.fire({
+        icon: "error",
+        title: "Failed to settle",
+        text: err.response?.data?.error || "Something went wrong",
+      });
+    } finally {
+      setConfirmingId(null);
+    }
+  };
 
   const columns = [
     { field: "id", headerName: "ID", width: 70 },
@@ -80,6 +112,37 @@ export default function UnSettledRequest() {
           context={contextFromRequest(params.row)}
           defaultMessage={DEFAULT_CONTACT_MESSAGE}
         />
+      ),
+    },
+    {
+      field: "select_donor",
+      headerName: "Assign donor",
+      flex: 1,
+      minWidth: 170,
+      sortable: false,
+      renderCell: (params) => (
+        <AsyncDonorSelect
+          value={selectedById[params.row.id] || null}
+          onChange={(donor) =>
+            setSelectedById((prev) => ({ ...prev, [params.row.id]: donor }))
+          }
+        />
+      ),
+    },
+    {
+      field: "confirm",
+      headerName: "Settle",
+      width: 120,
+      sortable: false,
+      renderCell: (params) => (
+        <Button
+          size="small"
+          variant="contained"
+          disabled={!selectedById[params.row.id] || confirmingId === params.row.id}
+          onClick={() => handleConfirm(params.row)}
+        >
+          {confirmingId === params.row.id ? "…" : "Confirm"}
+        </Button>
       ),
     },
     {
@@ -131,8 +194,8 @@ export default function UnSettledRequest() {
         Unsettled requests
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Open a request to see exact and compatible donor matches. If none are available, contact an
-        organization by call or WhatsApp with a custom emergency message.
+        Includes requests older than 3 days that left the New queue, plus other unsettled needs.
+        Open a row for donor matches and organization outreach, or assign a donor below to settle.
       </Typography>
 
       <Paper elevation={3} sx={{ width: "100%", height: 600 }}>

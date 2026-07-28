@@ -18,3 +18,9 @@ export async function fetchAdminMatches({ blood_group, request_id }) {
   });
   return data;
 }
+
+/** Full report payload for filters / export */
+export async function fetchReportData() {
+  const { data } = await api.get("/request/report-data");
+  return data;
+}

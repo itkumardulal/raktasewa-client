@@ -15,6 +15,11 @@ export async function fetchPendingDonors() {
   return data; // [{…}, {…}]
 }
 
+export async function fetchAssignedDonors() {
+  const { data } = await api.get("/donors/assigned");
+  return data;
+}
+
 export async function addDonor(payload) {
   const { data } = await api.post("/donors/add", payload);
   return data; // [{…}, {…}]

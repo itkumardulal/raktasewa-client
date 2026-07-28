@@ -1,13 +1,20 @@
 import React from "react";
-import { Box, Button, Stack } from "@mui/material";
+import { Button, Stack } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import BloodtypeIcon from "@mui/icons-material/Bloodtype";
 import Diversity3Icon from "@mui/icons-material/Diversity3";
 import AssessmentOutlinedIcon from "@mui/icons-material/AssessmentOutlined";
+import HourglassTopIcon from "@mui/icons-material/HourglassTop";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
 
 /** Quick links to existing routes only — no new APIs */
 const ACTIONS = [
+  {
+    label: "How it works",
+    to: "/how-it-works",
+    icon: <MenuBookIcon fontSize="small" />,
+  },
   {
     label: "Add Donor",
     to: "/add-donor",
@@ -24,8 +31,13 @@ const ACTIONS = [
     icon: <Diversity3Icon fontSize="small" />,
   },
   {
-    label: "Export / Settled",
-    to: "/settled-requests",
+    label: "Assigned Donors",
+    to: "/assigned-donors",
+    icon: <HourglassTopIcon fontSize="small" />,
+  },
+  {
+    label: "Reports & Export",
+    to: "/reports",
     icon: <AssessmentOutlinedIcon fontSize="small" />,
   },
 ];

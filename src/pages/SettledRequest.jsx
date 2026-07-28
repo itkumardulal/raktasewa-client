@@ -19,6 +19,7 @@ import ContactActionsDialog, {
   contextFromRequest,
 } from "../components/ContactActions";
 import { DEFAULT_CONTACT_MESSAGE } from "../constants/contactTemplates";
+import { sortByLatest } from "../utils/exportData";
 
 const SettledRequest = () => {
   const [settled, setSettled] = useState([]);
@@ -32,7 +33,7 @@ const SettledRequest = () => {
       try {
         const res = await fetchSettledRequests();
         if (res.success && Array.isArray(res.settled)) {
-          setSettled(res.settled);
+          setSettled(sortByLatest(res.settled, "settled_at"));
         } else {
           setError("Failed to fetch settled requests");
         }

@@ -16,6 +16,7 @@ import BloodtypeIcon from "@mui/icons-material/Bloodtype";
 import { loginService as apiLogin } from "../services/authService";
 import { useAuth } from "../contexts/AuthContext";
 import adminTheme, { adminColors } from "../theme/adminTheme";
+import { unlockNotificationAudio } from "../utils/notificationSounds";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -33,6 +34,7 @@ export default function LoginPage() {
     try {
       const { user } = await apiLogin(email, password);
       login(user);
+      await unlockNotificationAudio();
       navigate("/", { replace: true });
     } catch {
       setError("Invalid email or password");

@@ -27,6 +27,7 @@ import ContactActionsDialog, {
   contextFromRequest,
 } from "../components/ContactActions";
 import { DEFAULT_CONTACT_MESSAGE } from "../constants/contactTemplates";
+import { sortByLatest } from "../utils/exportData";
 
 export default function AllRequestList() {
   const [requests, setRequests] = useState([]);
@@ -45,7 +46,7 @@ export default function AllRequestList() {
       try {
         const res = await fetchRequests();
         if (res.success && Array.isArray(res.requests)) {
-          setRequests(res.requests);
+          setRequests(sortByLatest(res.requests, "created_at"));
         } else {
           setError("Failed to load blood requests");
         }
@@ -68,7 +69,6 @@ export default function AllRequestList() {
     }
 
     setConfirmingId(row.id);
-    await new Promise((res) => setTimeout(res, 3000)); // 3s delay
 
     const payload = {
       request: { id: row.id },
