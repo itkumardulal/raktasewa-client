@@ -31,6 +31,7 @@ import ContactActionsDialog, {
 import UnsettledMatchPanel from "../components/UnsettledMatchPanel";
 import { DEFAULT_CONTACT_MESSAGE } from "../constants/contactTemplates";
 import { sortByLatest } from "../utils/exportData";
+import { useAdminNotificationsContext } from "../contexts/AdminNotificationsContext";
 
 function daysOpen(createdAt) {
   if (!createdAt) return null;
@@ -43,6 +44,7 @@ function daysOpen(createdAt) {
 }
 
 export default function NewRequestList() {
+  const { markRequestIdsSeen } = useAdminNotificationsContext();
   const [requests, setRequests] = useState([]);
   const [windowDays, setWindowDays] = useState(3);
   const [loading, setLoading] = useState(true);
@@ -59,8 +61,11 @@ export default function NewRequestList() {
     try {
       const res = await fetchTodayRequests();
       if (res.success && Array.isArray(res.requests)) {
-        setRequests(sortByLatest(res.requests, "created_at"));
+        const list = sortByLatest(res.requests, "created_at");
+        setRequests(list);
         if (res.window_days) setWindowDays(res.window_days);
+        // Opening this page counts as seen → badge decreases
+        markRequestIdsSeen(list.map((r) => r.id));
       } else {
         setError("Failed to load new requests");
       }

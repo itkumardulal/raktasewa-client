@@ -32,6 +32,7 @@ import ContactActionsDialog, {
   contactsFromDonor,
 } from "../components/ContactActions";
 import { DEFAULT_CONTACT_MESSAGE } from "../constants/contactTemplates";
+import { useAdminNotificationsContext } from "../contexts/AdminNotificationsContext";
 
 const columns = [
   { field: "id", headerName: "ID", width: 70 },
@@ -93,6 +94,7 @@ const columns = [
 ];
 
 export default function PendingDonor() {
+  const { markDonorIdsSeen } = useAdminNotificationsContext();
   const [donors, setDonors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openRow, setOpenRow] = useState(null);
@@ -111,6 +113,8 @@ export default function PendingDonor() {
         const res = await fetchPendingDonors();
         if (res.success && Array.isArray(res.donors)) {
           setDonors(res.donors);
+          // Opening this page counts as seen → badge decreases
+          markDonorIdsSeen(res.donors.map((d) => d.id));
         } else {
           setError("Failed to load donors");
         }
@@ -120,7 +124,7 @@ export default function PendingDonor() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [markDonorIdsSeen]);
 
   const rowsWithActions = donors.map((donor) => ({
     ...donor,

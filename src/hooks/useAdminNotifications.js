@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { fetchRequests } from "../services/requestService";
+import { fetchTodayRequests } from "../services/requestService";
 import { fetchPendingDonors } from "../services/donorService";
 import {
   getSeenDonorIds,
@@ -31,8 +31,8 @@ function formatWhen(value) {
 }
 
 /**
- * Manual-refresh notifications for new/unsettled requests + pending donors.
- * No websockets — badge + sounds update on load and when Refresh is clicked.
+ * Manual-refresh notifications for NEW requests (3-day window) + pending donors.
+ * Badge counts = unseen IDs. Seen → count goes down; new arrivals → count goes up.
  */
 export function useAdminNotifications() {
   const [requests, setRequests] = useState([]);
@@ -50,7 +50,7 @@ export function useAdminNotifications() {
     try {
       await unlockNotificationAudio();
       const [reqRes, donorRes] = await Promise.all([
-        fetchRequests(),
+        fetchTodayRequests(),
         fetchPendingDonors(),
       ]);
 
@@ -60,7 +60,7 @@ export function useAdminNotifications() {
       const requestIds = nextRequests.map((r) => String(r.id));
       const donorIds = nextDonors.map((d) => String(d.id));
 
-      // First visit: seed as seen so existing backlog doesn't flood the badge
+      // First visit: seed current backlog as seen so only later arrivals bump the badge
       if (!isNotificationsInitialized()) {
         markAllSeen(requestIds, donorIds);
         markNotificationsInitialized();
@@ -105,6 +105,18 @@ export function useAdminNotifications() {
     refresh({ playSounds: false });
   }, [refresh]);
 
+  const unreadRequestCount = useMemo(
+    () => requests.filter((r) => !seenRequests.has(String(r.id))).length,
+    [requests, seenRequests]
+  );
+
+  const unreadDonorCount = useMemo(
+    () => donors.filter((d) => !seenDonors.has(String(d.id))).length,
+    [donors, seenDonors]
+  );
+
+  const unreadCount = unreadRequestCount + unreadDonorCount;
+
   const items = useMemo(() => {
     const reqItems = requests.map((r) => ({
       key: `request-${r.id}`,
@@ -112,9 +124,9 @@ export function useAdminNotifications() {
       kind: "request",
       unread: !seenRequests.has(String(r.id)),
       title: r.patient_name || "Blood request",
-      subtitle: `${r.patient_blood_group || "—"} · ${String(r.status || "").toUpperCase()} · ${r.hospital_name || "Hospital n/a"}`,
+      subtitle: `${r.patient_blood_group || "—"} · NEW · ${r.hospital_name || "Hospital n/a"}`,
       when: formatWhen(r.created_at),
-      to: r.status === "unsettled" ? "/unsettled-requests" : "/new-requests",
+      to: "/new-requests",
     }));
 
     const donorItems = donors.map((d) => ({
@@ -134,17 +146,24 @@ export function useAdminNotifications() {
     });
   }, [requests, donors, seenRequests, seenDonors]);
 
-  const unreadCount = useMemo(
-    () => items.filter((item) => item.unread).length,
-    [items]
-  );
-
   const markItemSeen = useCallback((item) => {
     if (item.kind === "request") {
       setSeenRequests(new Set(markRequestsSeen([item.id])));
     } else {
       setSeenDonors(new Set(markDonorsSeen([item.id])));
     }
+  }, []);
+
+  /** Mark a list of request IDs seen (e.g. after opening New Requests page). */
+  const markRequestIdsSeen = useCallback((ids) => {
+    if (!ids?.length) return;
+    setSeenRequests(new Set(markRequestsSeen(ids)));
+  }, []);
+
+  /** Mark a list of donor IDs seen (e.g. after opening Pending Donors page). */
+  const markDonorIdsSeen = useCallback((ids) => {
+    if (!ids?.length) return;
+    setSeenDonors(new Set(markDonorsSeen(ids)));
   }, []);
 
   const markEverythingSeen = useCallback(() => {
@@ -165,12 +184,16 @@ export function useAdminNotifications() {
   return {
     items,
     unreadCount,
+    unreadRequestCount,
+    unreadDonorCount,
     loading,
     error,
     muted,
     lastRefreshedAt,
     refresh,
     markItemSeen,
+    markRequestIdsSeen,
+    markDonorIdsSeen,
     markEverythingSeen,
     toggleMute,
   };

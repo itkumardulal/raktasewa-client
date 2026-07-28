@@ -15,6 +15,7 @@ import NewReleasesIcon from "@mui/icons-material/NewReleases";
 import HourglassTopIcon from "@mui/icons-material/HourglassTop";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
+import NavCountBadge from "../components/NavCountBadge";
 
 /** Same segments / routes — icons & labels only refreshed for UX */
 export const NAVIGATION = [
@@ -101,3 +102,42 @@ export const NAVIGATION = [
     icon: <ManageAccountsIcon />,
   },
 ];
+
+/** Attach unread count badges to New Request / Pending Donors nav items. */
+export function buildNavigationWithBadges({
+  unreadRequestCount = 0,
+  unreadDonorCount = 0,
+} = {}) {
+  return NAVIGATION.map((item) => {
+    if (!item.children) return item;
+
+    const isDonorGroup = item.segment === "/blood-donor";
+    const isRequestGroup = item.segment === "/blood-request";
+
+    return {
+      ...item,
+      action: isDonorGroup ? (
+        <NavCountBadge count={unreadDonorCount} />
+      ) : isRequestGroup ? (
+        <NavCountBadge count={unreadRequestCount} />
+      ) : (
+        item.action
+      ),
+      children: item.children.map((child) => {
+        if (child.segment === "pending-donors") {
+          return {
+            ...child,
+            action: <NavCountBadge count={unreadDonorCount} />,
+          };
+        }
+        if (child.segment === "new-requests") {
+          return {
+            ...child,
+            action: <NavCountBadge count={unreadRequestCount} />,
+          };
+        }
+        return child;
+      }),
+    };
+  });
+}

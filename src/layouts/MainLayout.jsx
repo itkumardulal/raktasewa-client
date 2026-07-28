@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppProvider } from "@toolpad/core/AppProvider";
 import { DashboardLayout } from "@toolpad/core/DashboardLayout";
@@ -16,9 +16,13 @@ import {
 import Brightness4Icon from "@mui/icons-material/Brightness4";
 import Brightness7Icon from "@mui/icons-material/Brightness7";
 import LogoutIcon from "@mui/icons-material/Logout";
-import { NAVIGATION } from "../config/Navigation";
+import { buildNavigationWithBadges } from "../config/Navigation";
 import { logoutService } from "../services/authService";
 import { useAuth } from "../contexts/AuthContext";
+import {
+  AdminNotificationsProvider,
+  useAdminNotificationsContext,
+} from "../contexts/AdminNotificationsContext";
 import adminTheme, { adminColors } from "../theme/adminTheme";
 import NotificationBell from "../components/NotificationBell";
 
@@ -119,12 +123,22 @@ function ToolbarActions() {
   );
 }
 
-export default function MainLayout() {
+function MainLayoutShell() {
   const router = useToolpadRouter();
+  const { unreadRequestCount, unreadDonorCount } = useAdminNotificationsContext();
+
+  const navigation = useMemo(
+    () =>
+      buildNavigationWithBadges({
+        unreadRequestCount,
+        unreadDonorCount,
+      }),
+    [unreadRequestCount, unreadDonorCount]
+  );
 
   return (
     <AppProvider
-      navigation={NAVIGATION}
+      navigation={navigation}
       router={router}
       theme={adminTheme}
       branding={{
@@ -173,5 +187,13 @@ export default function MainLayout() {
         </PageContainer>
       </DashboardLayout>
     </AppProvider>
+  );
+}
+
+export default function MainLayout() {
+  return (
+    <AdminNotificationsProvider>
+      <MainLayoutShell />
+    </AdminNotificationsProvider>
   );
 }

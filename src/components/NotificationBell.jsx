@@ -4,6 +4,7 @@ import {
   Badge,
   Box,
   Button,
+  Chip,
   CircularProgress,
   Divider,
   IconButton,
@@ -21,7 +22,7 @@ import VolumeOffIcon from "@mui/icons-material/VolumeOff";
 import VolumeUpIcon from "@mui/icons-material/VolumeUp";
 import BloodtypeIcon from "@mui/icons-material/Bloodtype";
 import VolunteerActivismIcon from "@mui/icons-material/VolunteerActivism";
-import { useAdminNotifications } from "../hooks/useAdminNotifications";
+import { useAdminNotificationsContext } from "../contexts/AdminNotificationsContext";
 import { unlockNotificationAudio } from "../utils/notificationSounds";
 import { adminColors } from "../theme/adminTheme";
 
@@ -33,6 +34,8 @@ export default function NotificationBell() {
   const {
     items,
     unreadCount,
+    unreadRequestCount,
+    unreadDonorCount,
     loading,
     error,
     muted,
@@ -41,7 +44,7 @@ export default function NotificationBell() {
     markItemSeen,
     markEverythingSeen,
     toggleMute,
-  } = useAdminNotifications();
+  } = useAdminNotificationsContext();
 
   const handleOpen = async (event) => {
     setAnchorEl(event.currentTarget);
@@ -63,7 +66,13 @@ export default function NotificationBell() {
 
   return (
     <>
-      <Tooltip title={unreadCount ? `${unreadCount} unread` : "Notifications"}>
+      <Tooltip
+        title={
+          unreadCount
+            ? `${unreadRequestCount} new request(s), ${unreadDonorCount} pending donor(s)`
+            : "Notifications"
+        }
+      >
         <IconButton color="inherit" size="small" onClick={handleOpen} aria-label="Notifications">
           <Badge
             badgeContent={unreadCount}
@@ -133,6 +142,31 @@ export default function NotificationBell() {
               </Tooltip>
             </Stack>
           </Stack>
+
+          <Stack direction="row" spacing={0.75} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
+            <Chip
+              size="small"
+              color={unreadRequestCount ? "error" : "default"}
+              variant={unreadRequestCount ? "filled" : "outlined"}
+              label={`Requests ${unreadRequestCount}`}
+              onClick={() => {
+                handleClose();
+                navigate("/new-requests");
+              }}
+              sx={{ fontWeight: 700 }}
+            />
+            <Chip
+              size="small"
+              color={unreadDonorCount ? "error" : "default"}
+              variant={unreadDonorCount ? "filled" : "outlined"}
+              label={`Donors ${unreadDonorCount}`}
+              onClick={() => {
+                handleClose();
+                navigate("/pending-donors");
+              }}
+              sx={{ fontWeight: 700 }}
+            />
+          </Stack>
         </Box>
 
         <Divider />
@@ -164,12 +198,12 @@ export default function NotificationBell() {
         {!error && items.length === 0 && !loading ? (
           <Box sx={{ px: 2, py: 3, textAlign: "center" }}>
             <Typography variant="body2" color="text.secondary">
-              No active requests or pending donors.
+              No new requests or pending donors.
             </Typography>
           </Box>
         ) : null}
 
-        <List dense sx={{ py: 0, maxHeight: 320, overflowY: "auto" }}>
+        <List dense sx={{ py: 0, maxHeight: 280, overflowY: "auto" }}>
           {items.map((item) => (
             <ListItemButton
               key={item.key}
