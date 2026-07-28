@@ -21,6 +21,8 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import { DataGrid } from "@mui/x-data-grid";
 import { fetchReportData } from "../services/requestService";
 import { downloadCsv, printPdfTable, sortByLatest } from "../utils/exportData";
+import { ContactQuickButtons } from "../components/ContactActions";
+import { DEFAULT_CONTACT_MESSAGE } from "../constants/contactTemplates";
 
 const DATASETS = [
   { id: "requests", label: "Blood requests" },
@@ -32,6 +34,43 @@ const DATASETS = [
 const REQUEST_STATUSES = ["all", "new", "unsettled", "settled"];
 const DONOR_STATUSES = ["all", "pending", "available", "assigned"];
 const BLOOD_GROUPS = ["all", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+
+function ContactCell({ phone, name, role, context }) {
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        gap: 0.75,
+        width: "100%",
+        minWidth: 0,
+        py: 0.5,
+      }}
+    >
+      <Typography
+        variant="caption"
+        sx={{
+          fontWeight: 700,
+          maxWidth: 96,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          flexShrink: 0,
+        }}
+        title={phone || "No phone"}
+      >
+        {phone || "—"}
+      </Typography>
+      <ContactQuickButtons
+        phone={phone}
+        name={name}
+        role={role}
+        context={context || {}}
+        defaultMessage={DEFAULT_CONTACT_MESSAGE}
+      />
+    </Box>
+  );
+}
 
 function inDateRange(value, from, to) {
   if (!value) return !from && !to;
@@ -100,7 +139,16 @@ export default function ReportsPage() {
       list = list.filter((r) => inDateRange(r.created_at, fromDate, toDate));
       if (q) {
         list = list.filter((r) =>
-          [r.patient_name, r.requester_name, r.hospital_name, r.city_district, r.requester_phone]
+          [
+            r.patient_name,
+            r.requester_name,
+            r.hospital_name,
+            r.city_district,
+            r.requester_phone,
+            r.requester_alt_phone,
+            r.requester_email,
+            r.contact_person_at_hospital,
+          ]
             .join(" ")
             .toLowerCase()
             .includes(q)
@@ -114,8 +162,11 @@ export default function ReportsPage() {
         { key: "urgency_level", header: "Urgency" },
         { key: "hospital_name", header: "Hospital" },
         { key: "city_district", header: "Area" },
+        { key: "contact_person_at_hospital", header: "Hospital contact" },
         { key: "requester_name", header: "Requester" },
-        { key: "requester_phone", header: "Phone" },
+        { key: "requester_phone", header: "Requester phone" },
+        { key: "requester_alt_phone", header: "Alt phone" },
+        { key: "requester_email", header: "Email" },
         { key: "created_at", header: "Created" },
       ];
       return {
@@ -124,12 +175,63 @@ export default function ReportsPage() {
         rows: list.map((r) => ({ ...r, id: r.id })),
         columns: [
           { field: "id", headerName: "ID", width: 70 },
-          { field: "patient_name", headerName: "Patient", flex: 1, minWidth: 130 },
-          { field: "patient_blood_group", headerName: "Blood", width: 90 },
-          { field: "status", headerName: "Status", width: 110 },
-          { field: "urgency_level", headerName: "Urgency", width: 110 },
-          { field: "hospital_name", headerName: "Hospital", flex: 1, minWidth: 140 },
-          { field: "created_at", headerName: "Created", width: 170 },
+          { field: "patient_name", headerName: "Patient", flex: 1, minWidth: 120 },
+          { field: "patient_blood_group", headerName: "Blood", width: 80 },
+          { field: "status", headerName: "Status", width: 100 },
+          { field: "requester_name", headerName: "Requester", width: 130 },
+          {
+            field: "requester_phone",
+            headerName: "Requester contact",
+            width: 210,
+            sortable: false,
+            renderCell: (params) => (
+              <ContactCell
+                phone={params.value}
+                name={params.row.requester_name}
+                role="Requester"
+                context={{
+                  patientName: params.row.patient_name,
+                  bloodGroup: params.row.patient_blood_group,
+                  status: params.row.status,
+                }}
+              />
+            ),
+          },
+          {
+            field: "requester_alt_phone",
+            headerName: "Alt phone",
+            width: 200,
+            sortable: false,
+            renderCell: (params) =>
+              params.value ? (
+                <ContactCell
+                  phone={params.value}
+                  name={params.row.requester_name}
+                  role="Alternate phone"
+                  context={{
+                    patientName: params.row.patient_name,
+                    bloodGroup: params.row.patient_blood_group,
+                  }}
+                />
+              ) : (
+                <Typography variant="caption" color="text.secondary">
+                  —
+                </Typography>
+              ),
+          },
+          {
+            field: "requester_email",
+            headerName: "Email",
+            width: 160,
+            valueFormatter: (value) => value || "—",
+          },
+          { field: "hospital_name", headerName: "Hospital", flex: 1, minWidth: 120 },
+          {
+            field: "contact_person_at_hospital",
+            headerName: "Hospital person",
+            width: 130,
+            valueFormatter: (value) => value || "—",
+          },
         ],
       };
     }
@@ -164,11 +266,36 @@ export default function ReportsPage() {
         rows: list.map((d) => ({ ...d, id: d.id })),
         columns: [
           { field: "id", headerName: "ID", width: 70 },
-          { field: "fullname", headerName: "Name", flex: 1, minWidth: 140 },
-          { field: "blood_group", headerName: "Blood", width: 90 },
-          { field: "status", headerName: "Status", width: 110 },
-          { field: "phone_number", headerName: "Phone", width: 130 },
-          { field: "created_at", headerName: "Created", width: 170 },
+          { field: "fullname", headerName: "Name", flex: 1, minWidth: 130 },
+          { field: "blood_group", headerName: "Blood", width: 80 },
+          { field: "status", headerName: "Status", width: 100 },
+          {
+            field: "phone_number",
+            headerName: "Phone / connect",
+            width: 210,
+            sortable: false,
+            renderCell: (params) => (
+              <ContactCell
+                phone={params.value}
+                name={params.row.fullname}
+                role="Donor"
+                context={{ bloodGroup: params.row.blood_group, status: params.row.status }}
+              />
+            ),
+          },
+          {
+            field: "email",
+            headerName: "Email",
+            width: 170,
+            valueFormatter: (value) => value || "—",
+          },
+          {
+            field: "address",
+            headerName: "Address",
+            flex: 1,
+            minWidth: 140,
+            valueFormatter: (value) => value || "—",
+          },
         ],
       };
     }
@@ -183,7 +310,14 @@ export default function ReportsPage() {
       list = list.filter((s) => inDateRange(s.settled_at, fromDate, toDate));
       if (q) {
         list = list.filter((s) =>
-          [s.patient_name, s.donor_name, s.hospital_name, s.requester_phone]
+          [
+            s.patient_name,
+            s.donor_name,
+            s.hospital_name,
+            s.requester_phone,
+            s.donor_phone,
+            s.requester_name,
+          ]
             .join(" ")
             .toLowerCase()
             .includes(q)
@@ -194,6 +328,8 @@ export default function ReportsPage() {
         { key: "settled_at", header: "Settled at" },
         { key: "patient_name", header: "Patient" },
         { key: "patient_blood_group", header: "Patient blood" },
+        { key: "requester_name", header: "Requester" },
+        { key: "requester_phone", header: "Requester phone" },
         { key: "donor_name", header: "Donor" },
         { key: "donor_blood_group", header: "Donor blood" },
         { key: "donor_phone", header: "Donor phone" },
@@ -206,11 +342,45 @@ export default function ReportsPage() {
         rows: list.map((s) => ({ ...s, id: s.settled_id })),
         columns: [
           { field: "settled_id", headerName: "ID", width: 70 },
-          { field: "settled_at", headerName: "Settled", width: 170 },
-          { field: "patient_name", headerName: "Patient", flex: 1, minWidth: 120 },
-          { field: "patient_blood_group", headerName: "P.Blood", width: 90 },
-          { field: "donor_name", headerName: "Donor", flex: 1, minWidth: 120 },
-          { field: "donor_blood_group", headerName: "D.Blood", width: 90 },
+          { field: "settled_at", headerName: "Settled", width: 150 },
+          { field: "patient_name", headerName: "Patient", width: 120 },
+          { field: "patient_blood_group", headerName: "P.Blood", width: 80 },
+          {
+            field: "requester_phone",
+            headerName: "Requester contact",
+            width: 210,
+            sortable: false,
+            renderCell: (params) => (
+              <ContactCell
+                phone={params.value}
+                name={params.row.requester_name}
+                role="Requester"
+                context={{
+                  patientName: params.row.patient_name,
+                  bloodGroup: params.row.patient_blood_group,
+                  status: "settled",
+                }}
+              />
+            ),
+          },
+          { field: "donor_name", headerName: "Donor", width: 120 },
+          {
+            field: "donor_phone",
+            headerName: "Donor contact",
+            width: 210,
+            sortable: false,
+            renderCell: (params) => (
+              <ContactCell
+                phone={params.value}
+                name={params.row.donor_name}
+                role="Donor"
+                context={{
+                  bloodGroup: params.row.donor_blood_group,
+                  status: "settled",
+                }}
+              />
+            ),
+          },
           { field: "hospital_name", headerName: "Hospital", flex: 1, minWidth: 120 },
         ],
       };
@@ -238,10 +408,34 @@ export default function ReportsPage() {
       rows: list.map((o) => ({ ...o, id: o.id })),
       columns: [
         { field: "id", headerName: "ID", width: 70 },
-        { field: "name", headerName: "Name", flex: 1, minWidth: 150 },
-        { field: "contact_person", headerName: "Contact", width: 140 },
-        { field: "phone_number", headerName: "Phone", width: 130 },
-        { field: "email", headerName: "Email", flex: 1, minWidth: 150 },
+        { field: "name", headerName: "Name", flex: 1, minWidth: 140 },
+        {
+          field: "contact_person",
+          headerName: "Contact person",
+          width: 140,
+          valueFormatter: (value) => value || "—",
+        },
+        {
+          field: "phone_number",
+          headerName: "Phone / connect",
+          width: 210,
+          sortable: false,
+          renderCell: (params) => (
+            <ContactCell
+              phone={params.value}
+              name={params.row.contact_person || params.row.name}
+              role="Organization"
+              context={{ status: "organization" }}
+            />
+          ),
+        },
+        {
+          field: "email",
+          headerName: "Email",
+          flex: 1,
+          minWidth: 150,
+          valueFormatter: (value) => value || "—",
+        },
       ],
     };
   }, [raw, dataset, status, bloodGroup, fromDate, toDate, search]);
@@ -265,8 +459,8 @@ export default function ReportsPage() {
         Reports & export
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Filter requests, donors, settled donations, and organizations. Export CSV for Excel or print
-        as PDF. Latest records stay on top.
+        Phone numbers and contacts are shown with Call / WhatsApp so you can connect instantly.
+        Export CSV/PDF still includes full contact fields.
       </Typography>
 
       <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1} sx={{ mb: 2, gap: 1 }}>
@@ -375,6 +569,13 @@ export default function ReportsPage() {
             pageSizeOptions={[10, 25, 50, 100]}
             initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
             disableRowSelectionOnClick
+            getRowHeight={() => "auto"}
+            sx={{
+              "& .MuiDataGrid-cell": {
+                alignItems: "center",
+                py: 0.5,
+              },
+            }}
           />
         )}
       </Paper>
