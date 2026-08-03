@@ -26,6 +26,8 @@ import {
 import adminTheme, { adminColors } from "../theme/adminTheme";
 import NotificationBell from "../components/NotificationBell";
 import { roleLabel } from "../utils/permissions";
+import { GamiProvider } from "../features/gamification/context/GamiContext";
+import CelebrationModal from "../features/gamification/components/CelebrationModal";
 
 function useToolpadRouter() {
   const location = useLocation();
@@ -196,7 +198,10 @@ function MainLayoutShell() {
 export default function MainLayout() {
   return (
     <AdminNotificationsProvider>
-      <MainLayoutShell />
+      <GamiProvider>
+        <MainLayoutShell />
+        <CelebrationModal />
+      </GamiProvider>
     </AdminNotificationsProvider>
   );
 }

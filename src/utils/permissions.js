@@ -23,6 +23,9 @@ export const FEATURES = [
   { key: "requests.flagged", label: "Spam / Flagged Requests", group: "Requests" },
   { key: "reports", label: "Reports & Export", group: "Insights" },
   { key: "organization", label: "Organizations", group: "Admin" },
+  { key: "gamification.mission", label: "Mission Center", group: "Mission" },
+  { key: "gamification.leaderboard", label: "Leaderboards", group: "Mission" },
+  { key: "gamification.config", label: "Gamification Config", group: "Mission" },
 ];
 
 export const FEATURE_KEYS = FEATURES.map((f) => f.key);
@@ -43,6 +46,9 @@ export const PRESETS = {
     "requests.flagged",
     "reports",
     "organization",
+    "gamification.mission",
+    "gamification.leaderboard",
+    "gamification.config",
   ],
   operator: [
     "dashboard",
@@ -54,6 +60,8 @@ export const PRESETS = {
     "requests.settled",
     "requests.unsettled",
     "requests.flagged",
+    "gamification.mission",
+    "gamification.leaderboard",
   ],
 };
 
@@ -79,6 +87,10 @@ export const SEGMENT_TO_FEATURE = {
   reports: "reports",
   organization: "organization",
   "user-accounts": "users.manage",
+  "mission-center": "gamification.mission",
+  "log-activity": "gamification.mission",
+  leaderboards: "gamification.leaderboard",
+  "gamification-config": "gamification.config",
 };
 
 export function normalizeRole(role) {

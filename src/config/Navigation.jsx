@@ -16,6 +16,10 @@ import HourglassTopIcon from "@mui/icons-material/HourglassTop";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import FlagIcon from "@mui/icons-material/Flag";
+import MilitaryTechIcon from "@mui/icons-material/MilitaryTech";
+import LeaderboardIcon from "@mui/icons-material/Leaderboard";
+import PhoneInTalkIcon from "@mui/icons-material/PhoneInTalk";
+import TuneIcon from "@mui/icons-material/Tune";
 import NavCountBadge from "../components/NavCountBadge";
 import { canAccessSegment } from "../utils/permissions";
 
@@ -99,6 +103,28 @@ export const NAVIGATION = [
     segment: "reports",
     title: "Reports & Export",
     icon: <AssessmentIcon />,
+  },
+
+  { kind: "header", title: "Mission" },
+  {
+    segment: "mission-center",
+    title: "Mission Center",
+    icon: <MilitaryTechIcon />,
+  },
+  {
+    segment: "log-activity",
+    title: "Log Activity",
+    icon: <PhoneInTalkIcon />,
+  },
+  {
+    segment: "leaderboards",
+    title: "Leaderboards",
+    icon: <LeaderboardIcon />,
+  },
+  {
+    segment: "gamification-config",
+    title: "Gamification Config",
+    icon: <TuneIcon />,
   },
 
   { kind: "header", title: "Admin" },

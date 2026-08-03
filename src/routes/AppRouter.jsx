@@ -1,5 +1,6 @@
-import React from "react";
+import React, { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { CircularProgress, Box } from "@mui/material";
 
 import LoginPage from "../pages/Login";
 import MainLayout from "../layouts/MainLayout";
@@ -21,6 +22,33 @@ import ReportsPage from "../pages/ReportsPage";
 import HowItWorksManual from "../pages/HowItWorksManual";
 import Organization from "../pages/Organization";
 import UserAccountPage from "../pages/UserAccounts";
+
+const MissionCenterPage = lazy(
+  () => import("../features/gamification/pages/MissionCenterPage")
+);
+const LogActivityPage = lazy(
+  () => import("../features/gamification/pages/LogActivityPage")
+);
+const LeaderboardPage = lazy(
+  () => import("../features/gamification/pages/LeaderboardPage")
+);
+const GamiConfigPage = lazy(
+  () => import("../features/gamification/pages/GamiConfigPage")
+);
+
+function LazyPage({ children }) {
+  return (
+    <Suspense
+      fallback={
+        <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+          <CircularProgress />
+        </Box>
+      }
+    >
+      {children}
+    </Suspense>
+  );
+}
 
 export default function AppRouter() {
   return (
@@ -154,6 +182,46 @@ export default function AppRouter() {
               element={
                 <RequireFeature userManagerOnly segment="user-accounts">
                   <UserAccountPage />
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="mission-center"
+              element={
+                <RequireFeature segment="mission-center">
+                  <LazyPage>
+                    <MissionCenterPage />
+                  </LazyPage>
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="log-activity"
+              element={
+                <RequireFeature segment="log-activity">
+                  <LazyPage>
+                    <LogActivityPage />
+                  </LazyPage>
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="leaderboards"
+              element={
+                <RequireFeature segment="leaderboards">
+                  <LazyPage>
+                    <LeaderboardPage />
+                  </LazyPage>
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="gamification-config"
+              element={
+                <RequireFeature userManagerOnly segment="gamification-config">
+                  <LazyPage>
+                    <GamiConfigPage />
+                  </LazyPage>
                 </RequireFeature>
               }
             />

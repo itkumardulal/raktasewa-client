@@ -24,6 +24,7 @@ import LatestDonorsTable from "../components/dashboard/LatestDonorsTable";
 import PendingApprovals from "../components/dashboard/PendingApprovals";
 import ActivityFeed from "../components/dashboard/ActivityFeed";
 import BloodGroupDonut from "../components/dashboard/BloodGroupDonut";
+import DashboardMissionStrip from "../features/gamification/components/DashboardMissionStrip";
 import { dashboardData } from "../services/dashboardService";
 import { fetchDonors, fetchPendingDonors, updateDonorStatus } from "../services/donorService";
 import { fetchUnSettledRequests } from "../services/unsettledService";
@@ -372,6 +373,8 @@ export default function Dashboard() {
           </Grid>
 
           <LatestDonorsTable donors={donors} loading={panelsLoading} />
+
+          <DashboardMissionStrip />
         </>
       )}
     </Box>
