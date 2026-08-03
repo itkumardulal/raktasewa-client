@@ -37,19 +37,32 @@ export default function MissionCenterPage() {
   useEffect(() => {
     (async () => {
       setLoading(true);
+      setError(null);
       try {
-        const [m, t, a] = await Promise.all([
+        const results = await Promise.allSettled([
           fetchMissions(),
           fetchTeamPerformance(),
           fetchAchievements(),
         ]);
-        setMissions(m.missions || []);
-        setTeam(t);
-        setAchievements(a.achievements || []);
-        setUnlocked(a.unlocked || []);
+        const m = results[0].status === "fulfilled" ? results[0].value : null;
+        const t = results[1].status === "fulfilled" ? results[1].value : null;
+        const a = results[2].status === "fulfilled" ? results[2].value : null;
+
+        if (!m && !t && !a) {
+          setError(
+            "Could not load Mission Center. Check server deploy and API errors."
+          );
+        } else {
+          setMissions(m?.missions || []);
+          setTeam(t || { members: [], metrics: {} });
+          setAchievements(a?.achievements || []);
+          setUnlocked(a?.unlocked || []);
+        }
         await refresh?.();
       } catch {
-        setError("Could not load Mission Center. Run the gamification SQL migration if needed.");
+        setError(
+          "Could not load Mission Center. Check server deploy and gamification API."
+        );
       } finally {
         setLoading(false);
       }
