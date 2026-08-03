@@ -16,6 +16,7 @@ import HourglassTopIcon from "@mui/icons-material/HourglassTop";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import NavCountBadge from "../components/NavCountBadge";
+import { canAccessSegment } from "../utils/permissions";
 
 /** Same segments / routes — icons & labels only refreshed for UX */
 export const NAVIGATION = [
@@ -103,12 +104,62 @@ export const NAVIGATION = [
   },
 ];
 
-/** Attach unread count badges to New Request / Pending Donors nav items. */
+function filterNavByUser(items, user) {
+  const out = [];
+  let i = 0;
+
+  while (i < items.length) {
+    const item = items[i];
+
+    if (item.kind === "header") {
+      let j = i + 1;
+      while (j < items.length && items[j].kind !== "header") j += 1;
+      const section = items.slice(i + 1, j);
+      const visible = section
+        .map((entry) => {
+          if (entry.children?.length) {
+            const children = entry.children.filter((c) =>
+              canAccessSegment(user, c.segment)
+            );
+            if (children.length === 0) return null;
+            return { ...entry, children };
+          }
+          if (canAccessSegment(user, entry.segment)) return entry;
+          return null;
+        })
+        .filter(Boolean);
+
+      if (visible.length > 0) {
+        out.push(item);
+        out.push(...visible);
+      }
+      i = j;
+      continue;
+    }
+
+    if (item.children?.length) {
+      const children = item.children.filter((c) =>
+        canAccessSegment(user, c.segment)
+      );
+      if (children.length > 0) out.push({ ...item, children });
+    } else if (canAccessSegment(user, item.segment)) {
+      out.push(item);
+    }
+    i += 1;
+  }
+
+  return out;
+}
+
+/** Filter by user features, then attach unread count badges. */
 export function buildNavigationWithBadges({
   unreadRequestCount = 0,
   unreadDonorCount = 0,
+  user,
 } = {}) {
-  return NAVIGATION.map((item) => {
+  const base = filterNavByUser(NAVIGATION, user);
+
+  return base.map((item) => {
     if (!item.children) return item;
 
     const isDonorGroup = item.segment === "/blood-donor";

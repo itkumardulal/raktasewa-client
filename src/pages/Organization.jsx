@@ -24,8 +24,13 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import { useAuth } from "../contexts/AuthContext";
+import { canDelete, canManageOrganizations } from "../utils/permissions";
 
 export default function Organization() {
+  const { user } = useAuth();
+  const allowDelete = canDelete(user);
+  const allowManage = canManageOrganizations(user);
   const [rows, setRows] = useState([]);
   const [open, setOpen] = useState(false);
   const [formMessage, setFormMessage] = useState(null);
@@ -175,16 +180,19 @@ export default function Organization() {
             size="small"
             color="primary"
             onClick={() => handleEdit(params.row)}
+            disabled={!allowManage}
           >
             <EditIcon fontSize="small" />
           </IconButton>
-          <IconButton
-            size="small"
-            color="error"
-            onClick={() => handleDelete(params.row.id)}
-          >
-            <DeleteIcon fontSize="small" />
-          </IconButton>
+          {allowDelete ? (
+            <IconButton
+              size="small"
+              color="error"
+              onClick={() => handleDelete(params.row.id)}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          ) : null}
         </Box>
       ),
     },
@@ -201,15 +209,17 @@ export default function Organization() {
         }}
       >
         <Typography variant="h5">Organizations</Typography>
-        <Button
-          variant="contained"
-          onClick={() => {
-            resetForm();
-            setOpen(true);
-          }}
-        >
-          Add Organization
-        </Button>
+        {allowManage ? (
+          <Button
+            variant="contained"
+            onClick={() => {
+              resetForm();
+              setOpen(true);
+            }}
+          >
+            Add Organization
+          </Button>
+        ) : null}
       </Box>
 
       <Paper elevation={3} sx={{ height: 500 }}>

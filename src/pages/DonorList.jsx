@@ -28,6 +28,8 @@ import {
   // updateDonorStatus,
 } from "../services/donorService";
 import { DONOR_STATUSES } from "../constants/constants";
+import { useAuth } from "../contexts/AuthContext";
+import { canDelete } from "../utils/permissions";
 import ContactActionsDialog, {
   ContactQuickButtons,
   contactsFromDonor,
@@ -94,6 +96,8 @@ const columns = [
 ];
 
 export default function DonorListPage() {
+  const { user } = useAuth();
+  const allowDelete = canDelete(user);
   const [donors, setDonors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openRow, setOpenRow] = useState(null);
@@ -138,14 +142,16 @@ export default function DonorListPage() {
           <EditIcon fontSize="inherit" />
         </IconButton>
 
-        <IconButton
-          size="small"
-          aria-label="delete"
-          color="error"
-          onClick={() => handleDelete(donor)}
-        >
-          <DeleteIcon fontSize="inherit" />
-        </IconButton>
+        {allowDelete ? (
+          <IconButton
+            size="small"
+            aria-label="delete"
+            color="error"
+            onClick={() => handleDelete(donor)}
+          >
+            <DeleteIcon fontSize="inherit" />
+          </IconButton>
+        ) : null}
         <IconButton
           size="small"
           color="secondary"

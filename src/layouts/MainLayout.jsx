@@ -25,6 +25,7 @@ import {
 } from "../contexts/AdminNotificationsContext";
 import adminTheme, { adminColors } from "../theme/adminTheme";
 import NotificationBell from "../components/NotificationBell";
+import { roleLabel } from "../utils/permissions";
 
 function useToolpadRouter() {
   const location = useLocation();
@@ -114,7 +115,7 @@ function ToolbarActions() {
             {user?.email || "Admin"}
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
-            {user?.role || "admin"}
+            {roleLabel(user?.role)}
           </Typography>
         </Box>
       </Box>
@@ -125,6 +126,7 @@ function ToolbarActions() {
 
 function MainLayoutShell() {
   const router = useToolpadRouter();
+  const { user } = useAuth();
   const { unreadRequestCount, unreadDonorCount } = useAdminNotificationsContext();
 
   const navigation = useMemo(
@@ -132,8 +134,9 @@ function MainLayoutShell() {
       buildNavigationWithBadges({
         unreadRequestCount,
         unreadDonorCount,
+        user,
       }),
-    [unreadRequestCount, unreadDonorCount]
+    [unreadRequestCount, unreadDonorCount, user]
   );
 
   return (

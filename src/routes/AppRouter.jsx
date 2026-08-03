@@ -9,6 +9,7 @@ import DonorListPage from "../pages/DonorList";
 import VIDonorListPage from "../pages/VIDonorList";
 import { AuthProvider } from "../contexts/AuthContext";
 import RequireAuth from "./RequireAuth";
+import RequireFeature from "./RequireFeature";
 import NewRequestList from "../pages/NewRequestList";
 import AllRequestList from "../pages/AllRequestList";
 import SettledRequest from "../pages/SettledRequest";
@@ -25,10 +26,8 @@ export default function AppRouter() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* ——— Public sign-in ——— */}
           <Route path="signin" element={<LoginPage />} />
 
-          {/* ——— Protected area (has drawer) ——— */}
           <Route
             element={
               <RequireAuth>
@@ -36,23 +35,121 @@ export default function AppRouter() {
               </RequireAuth>
             }
           >
-            <Route index element={<Dashboard />} /> {/* “/” */}
-            <Route path="how-it-works" element={<HowItWorksManual />} />
-            <Route path="add-donor" element={<AddDonorPage />} />
-            <Route path="enrolled-donors" element={<DonorListPage />} />
-            <Route path="vi-donor-lists" element={<VIDonorListPage />} />
-            <Route path="pending-donors" element={<PendingDonor />} />
-            <Route path="assigned-donors" element={<AssignedDonors />} />
-            <Route path="all-requests" element={<AllRequestList />} />
-            <Route path="new-requests" element={<NewRequestList />} />
-            <Route path="settled-requests" element={<SettledRequest />} />
-            <Route path="unsettled-requests" element={<UnSettledRequest />} />
-            <Route path="reports" element={<ReportsPage />} />
-            <Route path="organization" element={<Organization />} />
-            <Route path="user-accounts" element={<UserAccountPage />} />
+            <Route
+              index
+              element={
+                <RequireFeature segment="">
+                  <Dashboard />
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="how-it-works"
+              element={
+                <RequireFeature segment="how-it-works">
+                  <HowItWorksManual />
+                </RequireFeature>
+              }
+            />
+
+            <Route
+              path="add-donor"
+              element={
+                <RequireFeature segment="add-donor">
+                  <AddDonorPage />
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="enrolled-donors"
+              element={
+                <RequireFeature segment="enrolled-donors">
+                  <DonorListPage />
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="vi-donor-lists"
+              element={
+                <RequireFeature segment="vi-donor-lists">
+                  <VIDonorListPage />
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="pending-donors"
+              element={
+                <RequireFeature segment="pending-donors">
+                  <PendingDonor />
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="assigned-donors"
+              element={
+                <RequireFeature segment="assigned-donors">
+                  <AssignedDonors />
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="all-requests"
+              element={
+                <RequireFeature segment="all-requests">
+                  <AllRequestList />
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="new-requests"
+              element={
+                <RequireFeature segment="new-requests">
+                  <NewRequestList />
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="settled-requests"
+              element={
+                <RequireFeature segment="settled-requests">
+                  <SettledRequest />
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="unsettled-requests"
+              element={
+                <RequireFeature segment="unsettled-requests">
+                  <UnSettledRequest />
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="reports"
+              element={
+                <RequireFeature segment="reports">
+                  <ReportsPage />
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="organization"
+              element={
+                <RequireFeature segment="organization">
+                  <Organization />
+                </RequireFeature>
+              }
+            />
+            <Route
+              path="user-accounts"
+              element={
+                <RequireFeature superAdminOnly segment="user-accounts">
+                  <UserAccountPage />
+                </RequireFeature>
+              }
+            />
           </Route>
 
-          {/* ——— Catch-all: anything not matched above ——— */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
