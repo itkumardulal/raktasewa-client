@@ -14,6 +14,7 @@ import NewRequestList from "../pages/NewRequestList";
 import AllRequestList from "../pages/AllRequestList";
 import SettledRequest from "../pages/SettledRequest";
 import UnSettledRequest from "../pages/UnSettledRequest";
+import FlaggedRequests from "../pages/FlaggedRequests";
 import PendingDonor from "../pages/PendingDonor";
 import AssignedDonors from "../pages/AssignedDonors";
 import ReportsPage from "../pages/ReportsPage";
@@ -125,6 +126,14 @@ export default function AppRouter() {
               }
             />
             <Route
+              path="flagged-requests"
+              element={
+                <RequireFeature segment="flagged-requests">
+                  <FlaggedRequests />
+                </RequireFeature>
+              }
+            />
+            <Route
               path="reports"
               element={
                 <RequireFeature segment="reports">
@@ -143,7 +152,7 @@ export default function AppRouter() {
             <Route
               path="user-accounts"
               element={
-                <RequireFeature superAdminOnly segment="user-accounts">
+                <RequireFeature userManagerOnly segment="user-accounts">
                   <UserAccountPage />
                 </RequireFeature>
               }

@@ -13,10 +13,12 @@ import {
   CircularProgress,
   Alert,
   TextField,
+  MenuItem,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { fetchRequests } from "../services/requestService";
+import FlagIcon from "@mui/icons-material/Flag";
+import { fetchRequests, flagRequest } from "../services/requestService";
 import AsyncDonorSelect from "../components/AsyncDonorSelect";
 import { settleRequest } from "../services/settleService";
 import Swal from "sweetalert2";
@@ -29,6 +31,15 @@ import ContactActionsDialog, {
 import { DEFAULT_CONTACT_MESSAGE } from "../constants/contactTemplates";
 import { sortByLatest } from "../utils/exportData";
 
+const DEFAULT_FLAG_REASONS = [
+  "Fake / spam request",
+  "Duplicate request",
+  "Wrong contact info",
+  "Already resolved elsewhere",
+  "Test / junk submission",
+  "Other",
+];
+
 export default function AllRequestList() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,26 +47,34 @@ export default function AllRequestList() {
   const [contactRow, setContactRow] = useState(null);
   const [error, setError] = useState(null);
   const [searchText, setSearchText] = useState("");
-  const [confirmingId, setConfirmingId] = useState(null); // loading state for per-row confirm
+  const [confirmingId, setConfirmingId] = useState(null);
+  const [flagRow, setFlagRow] = useState(null);
+  const [flagReason, setFlagReason] = useState(DEFAULT_FLAG_REASONS[0]);
+  const [flagCustom, setFlagCustom] = useState("");
+  const [flagging, setFlagging] = useState(false);
 
   const handleView = (row) => setOpenRow(row);
   const handleClose = () => setOpenRow(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetchRequests();
-        if (res.success && Array.isArray(res.requests)) {
-          setRequests(sortByLatest(res.requests, "created_at"));
-        } else {
-          setError("Failed to load blood requests");
-        }
-      } catch (err) {
-        setError("Server error. Please try again.");
-      } finally {
-        setLoading(false);
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchRequests();
+      if (res.success && Array.isArray(res.requests)) {
+        setRequests(sortByLatest(res.requests, "created_at"));
+      } else {
+        setError("Failed to load blood requests");
       }
-    })();
+    } catch (err) {
+      setError("Server error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
   }, []);
 
   const handleConfirm = async (row) => {
@@ -80,12 +99,12 @@ export default function AllRequestList() {
 
       await Swal.fire({
         icon: "success",
-        title: "Request Settled 🎉",
+        title: "Request Settled",
         text: "The request has been successfully settled!",
         confirmButtonText: "OK",
       });
 
-      window.location.reload(); // full reload after success
+      await load();
     } catch (err) {
       Swal.fire({
         icon: "error",
@@ -94,6 +113,51 @@ export default function AllRequestList() {
       });
     } finally {
       setConfirmingId(null);
+    }
+  };
+
+  const openFlagDialog = (row) => {
+    setFlagRow(row);
+    setFlagReason(DEFAULT_FLAG_REASONS[0]);
+    setFlagCustom("");
+  };
+
+  const submitFlag = async () => {
+    if (!flagRow) return;
+    const custom = flagCustom.trim();
+    if (flagReason === "Other" && !custom) {
+      Swal.fire("Reason required", "Please enter a custom reason.", "warning");
+      return;
+    }
+
+    setFlagging(true);
+    try {
+      const res = await flagRequest({
+        request_id: flagRow.id,
+        reason: flagReason,
+        custom_reason: flagReason === "Other" ? custom : undefined,
+      });
+      if (res.success) {
+        setFlagRow(null);
+        await Swal.fire({
+          icon: "success",
+          title: "Flagged",
+          text: "Moved to Spam / Flagged requests.",
+          timer: 1600,
+          showConfirmButton: false,
+        });
+        await load();
+      } else {
+        Swal.fire("Error", res.message || "Could not flag request", "error");
+      }
+    } catch (err) {
+      Swal.fire(
+        "Error",
+        err?.response?.data?.message || "Server error while flagging",
+        "error"
+      );
+    } finally {
+      setFlagging(false);
     }
   };
 
@@ -165,7 +229,7 @@ export default function AllRequestList() {
     {
       field: "actions",
       headerName: "Actions",
-      width: 120,
+      width: 160,
       sortable: false,
       filterable: false,
       renderCell: (params) => (
@@ -184,6 +248,15 @@ export default function AllRequestList() {
             aria-label="contact"
           >
             <ChatIcon fontSize="inherit" />
+          </IconButton>
+          <IconButton
+            size="small"
+            color="warning"
+            onClick={() => openFlagDialog(params.row)}
+            aria-label="flag spam"
+            title="Flag as spam / unwanted"
+          >
+            <FlagIcon fontSize="inherit" />
           </IconButton>
         </>
       ),
@@ -281,6 +354,66 @@ export default function AllRequestList() {
         context={contextFromRequest(contactRow)}
         title="Contact requester / donor"
       />
+
+      <Dialog
+        open={Boolean(flagRow)}
+        onClose={() => !flagging && setFlagRow(null)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Flag as spam / unwanted</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            This removes the request from active lists and moves it to{" "}
+            <strong>Spam / Flagged</strong>.
+          </Typography>
+          {flagRow ? (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              #{flagRow.id} — {flagRow.patient_name || "Patient"} (
+              {flagRow.patient_blood_group || "—"})
+            </Typography>
+          ) : null}
+          <TextField
+            select
+            fullWidth
+            label="Reason"
+            value={flagReason}
+            onChange={(e) => setFlagReason(e.target.value)}
+            sx={{ mb: 2 }}
+          >
+            {DEFAULT_FLAG_REASONS.map((r) => (
+              <MenuItem key={r} value={r}>
+                {r}
+              </MenuItem>
+            ))}
+          </TextField>
+          {flagReason === "Other" ? (
+            <TextField
+              fullWidth
+              multiline
+              minRows={2}
+              label="Custom reason"
+              value={flagCustom}
+              onChange={(e) => setFlagCustom(e.target.value)}
+              required
+            />
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={flagging} onClick={() => setFlagRow(null)}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            disabled={flagging}
+            onClick={submitFlag}
+            startIcon={flagging ? <CircularProgress size={16} /> : <FlagIcon />}
+          >
+            {flagging ? "Flagging..." : "Flag & move"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

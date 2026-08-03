@@ -1,7 +1,10 @@
-/** Admin RBAC — per-user features; Super Admin has all. Sync keys with server/constants/features.js */
+/** Admin RBAC — sync with server/constants/features.js
+ * Hierarchy: super_admin > admin > staff
+ */
 
 export const ROLES = {
   SUPER_ADMIN: "super_admin",
+  ADMIN: "admin",
   STAFF: "staff",
 };
 
@@ -17,6 +20,7 @@ export const FEATURES = [
   { key: "requests.new", label: "New Requests", group: "Requests" },
   { key: "requests.settled", label: "Settled Requests", group: "Requests" },
   { key: "requests.unsettled", label: "Unsettled Requests", group: "Requests" },
+  { key: "requests.flagged", label: "Spam / Flagged Requests", group: "Requests" },
   { key: "reports", label: "Reports & Export", group: "Insights" },
   { key: "organization", label: "Organizations", group: "Admin" },
 ];
@@ -36,6 +40,7 @@ export const PRESETS = {
     "requests.new",
     "requests.settled",
     "requests.unsettled",
+    "requests.flagged",
     "reports",
     "organization",
   ],
@@ -48,11 +53,13 @@ export const PRESETS = {
     "requests.new",
     "requests.settled",
     "requests.unsettled",
+    "requests.flagged",
   ],
 };
 
 export const ROLE_OPTIONS = [
   { value: ROLES.SUPER_ADMIN, label: "Super Admin (full control)" },
+  { value: ROLES.ADMIN, label: "Admin (can create staff)" },
   { value: ROLES.STAFF, label: "Staff (custom features)" },
 ];
 
@@ -68,6 +75,7 @@ export const SEGMENT_TO_FEATURE = {
   "new-requests": "requests.new",
   "settled-requests": "requests.settled",
   "unsettled-requests": "requests.unsettled",
+  "flagged-requests": "requests.flagged",
   reports: "reports",
   organization: "organization",
   "user-accounts": "users.manage",
@@ -76,6 +84,7 @@ export const SEGMENT_TO_FEATURE = {
 export function normalizeRole(role) {
   const r = String(role || "").toLowerCase().trim();
   if (r === ROLES.SUPER_ADMIN) return ROLES.SUPER_ADMIN;
+  if (r === ROLES.ADMIN) return ROLES.ADMIN;
   return ROLES.STAFF;
 }
 
@@ -96,17 +105,26 @@ export function isSuperAdmin(user) {
   return normalizeRole(user?.role) === ROLES.SUPER_ADMIN;
 }
 
+export function isAdmin(user) {
+  return normalizeRole(user?.role) === ROLES.ADMIN;
+}
+
 export function hasFeature(user, featureKey) {
   if (!user) return false;
   if (isSuperAdmin(user)) return true;
-  if (featureKey === "users.manage" || featureKey === "data.delete") return false;
-  return parsePermissions(user.permissions).includes(featureKey);
+  if (featureKey === "data.delete") return false;
+  if (featureKey === "users.manage") return canManageUsers(user);
+  const perms = parsePermissions(user.permissions);
+  if (isAdmin(user) && perms.length === 0) {
+    return PRESETS.admin.includes(featureKey);
+  }
+  return perms.includes(featureKey);
 }
 
 export function canAccessSegment(user, segment) {
   const feature = SEGMENT_TO_FEATURE[String(segment ?? "")];
   if (!feature) return isSuperAdmin(user);
-  if (feature === "users.manage") return isSuperAdmin(user);
+  if (feature === "users.manage") return canManageUsers(user);
   return hasFeature(user, feature);
 }
 
@@ -115,7 +133,25 @@ export function canDelete(user) {
 }
 
 export function canManageUsers(user) {
-  return isSuperAdmin(user);
+  return isSuperAdmin(user) || isAdmin(user);
+}
+
+/** Roles the current user may assign when creating/editing */
+export function creatableRoles(actor) {
+  if (isSuperAdmin(actor)) return ROLE_OPTIONS;
+  if (isAdmin(actor)) {
+    return ROLE_OPTIONS.filter((o) => o.value === ROLES.STAFF);
+  }
+  return [];
+}
+
+/** Features the actor may assign to staff */
+export function assignableFeatures(actor, catalog = FEATURES) {
+  if (isSuperAdmin(actor)) return catalog.map((f) => f.key);
+  const perms = parsePermissions(actor?.permissions);
+  if (perms.length) return perms;
+  if (isAdmin(actor)) return [...PRESETS.admin];
+  return [];
 }
 
 export function canManageOrganizations(user) {
@@ -140,9 +176,9 @@ export function roleLabel(role) {
   return found?.label || r;
 }
 
-export function featureGroups() {
+export function featureGroups(catalog = FEATURES) {
   const map = {};
-  FEATURES.forEach((f) => {
+  catalog.forEach((f) => {
     if (!map[f.group]) map[f.group] = [];
     map[f.group].push(f);
   });

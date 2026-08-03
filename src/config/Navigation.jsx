@@ -15,6 +15,7 @@ import NewReleasesIcon from "@mui/icons-material/NewReleases";
 import HourglassTopIcon from "@mui/icons-material/HourglassTop";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
+import FlagIcon from "@mui/icons-material/Flag";
 import NavCountBadge from "../components/NavCountBadge";
 import { canAccessSegment } from "../utils/permissions";
 
@@ -84,6 +85,11 @@ export const NAVIGATION = [
         segment: "unsettled-requests",
         title: "Unsettled Request",
         icon: <ReportProblemIcon />,
+      },
+      {
+        segment: "flagged-requests",
+        title: "Spam / Flagged",
+        icon: <FlagIcon />,
       },
     ],
   },

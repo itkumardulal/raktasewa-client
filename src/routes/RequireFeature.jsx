@@ -10,15 +10,13 @@ import {
 
 /**
  * Guard a route by feature / segment access.
- * @param {string} [segment] - nav segment key
- * @param {string} [feature] - explicit feature key
- * @param {boolean} [superAdminOnly]
  */
 export default function RequireFeature({
   children,
   segment,
   feature,
   superAdminOnly = false,
+  userManagerOnly = false,
 }) {
   const { user, status } = useAuth();
   const location = useLocation();
@@ -28,7 +26,11 @@ export default function RequireFeature({
     return <Navigate to="/signin" state={{ from: location }} replace />;
   }
 
-  if (superAdminOnly && !isSuperAdmin(user) && !canManageUsers(user)) {
+  if (superAdminOnly && !isSuperAdmin(user)) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (userManagerOnly && !canManageUsers(user)) {
     return <Navigate to="/" replace />;
   }
 

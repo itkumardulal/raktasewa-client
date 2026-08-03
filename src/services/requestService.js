@@ -24,3 +24,22 @@ export async function fetchReportData() {
   const { data } = await api.get("/request/report-data");
   return data;
 }
+
+export async function fetchFlaggedRequests() {
+  const { data } = await api.get("/request/flagged");
+  return data;
+}
+
+export async function flagRequest({ request_id, reason, custom_reason }) {
+  const { data } = await api.post("/request/flag", {
+    request_id,
+    reason,
+    custom_reason,
+  });
+  return data;
+}
+
+export async function unflagRequest({ request_id }) {
+  const { data } = await api.post("/request/unflag", { request_id });
+  return data;
+}

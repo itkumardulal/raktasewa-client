@@ -32,27 +32,41 @@ import {
   updateUser,
   deleteUser,
 } from "../services/userService";
+import { useAuth } from "../contexts/AuthContext";
 import {
-  ROLE_OPTIONS,
   ROLES,
   PRESETS,
   FEATURES,
   roleLabel,
   parsePermissions,
+  creatableRoles,
+  assignableFeatures,
+  isSuperAdmin,
+  isAdmin,
+  featureGroups,
 } from "../utils/permissions";
 
-const emptyForm = () => ({
-  email: "",
-  full_name: "",
-  phone: "",
-  password: "",
-  confirmPassword: "",
-  role: ROLES.STAFF,
-  is_active: true,
-  permissions: [...PRESETS.operator],
-});
-
 export default function UserAccountPage() {
+  const { user: actor } = useAuth();
+  const roleChoices = useMemo(() => creatableRoles(actor), [actor]);
+  const allowedFeatureKeys = useMemo(
+    () => assignableFeatures(actor),
+    [actor]
+  );
+
+  const emptyForm = () => ({
+    email: "",
+    full_name: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+    role: roleChoices[0]?.value || ROLES.STAFF,
+    is_active: true,
+    permissions: [...PRESETS.operator].filter((k) =>
+      allowedFeatureKeys.includes(k)
+    ),
+  });
+
   const [rows, setRows] = useState([]);
   const [catalog, setCatalog] = useState(FEATURES);
   const [presets, setPresets] = useState(PRESETS);
@@ -64,13 +78,14 @@ export default function UserAccountPage() {
   const [formMessage, setFormMessage] = useState(null);
 
   const groups = useMemo(() => {
-    const map = {};
-    catalog.forEach((f) => {
-      if (!map[f.group]) map[f.group] = [];
-      map[f.group].push(f);
+    const full = featureGroups(catalog);
+    const filtered = {};
+    Object.entries(full).forEach(([group, items]) => {
+      const list = items.filter((f) => allowedFeatureKeys.includes(f.key));
+      if (list.length) filtered[group] = list;
     });
-    return map;
-  }, [catalog]);
+    return filtered;
+  }, [catalog, allowedFeatureKeys]);
 
   const resetForm = () => {
     setForm(emptyForm());
@@ -85,6 +100,7 @@ export default function UserAccountPage() {
   };
 
   const togglePermission = (key) => {
+    if (!allowedFeatureKeys.includes(key)) return;
     setForm((prev) => {
       const set = new Set(prev.permissions);
       if (set.has(key)) set.delete(key);
@@ -94,7 +110,9 @@ export default function UserAccountPage() {
   };
 
   const applyPreset = (name) => {
-    const list = presets[name] || PRESETS[name] || [];
+    const list = (presets[name] || PRESETS[name] || []).filter((k) =>
+      allowedFeatureKeys.includes(k)
+    );
     setForm((prev) => ({ ...prev, permissions: [...list] }));
   };
 
@@ -139,6 +157,12 @@ export default function UserAccountPage() {
       return;
     }
 
+    const allowedRoles = roleChoices.map((r) => r.value);
+    if (!allowedRoles.includes(form.role)) {
+      setFormMessage({ type: "error", text: "You cannot assign that role." });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -149,7 +173,9 @@ export default function UserAccountPage() {
         role: form.role,
         is_active: form.is_active,
         permissions:
-          form.role === ROLES.SUPER_ADMIN ? [] : form.permissions,
+          form.role === ROLES.SUPER_ADMIN
+            ? []
+            : form.permissions.filter((k) => allowedFeatureKeys.includes(k)),
       };
 
       if (form.password) {
@@ -185,18 +211,22 @@ export default function UserAccountPage() {
     }
   };
 
-  const handleEdit = (user) => {
+  const handleEdit = (row) => {
     setForm({
-      email: user.email || "",
-      full_name: user.full_name || "",
-      phone: user.phone || "",
+      email: row.email || "",
+      full_name: row.full_name || "",
+      phone: row.phone || "",
       password: "",
       confirmPassword: "",
-      role: user.role === ROLES.SUPER_ADMIN ? ROLES.SUPER_ADMIN : ROLES.STAFF,
-      is_active: user.is_active !== 0 && user.is_active !== false,
-      permissions: parsePermissions(user.permissions),
+      role: roleChoices.some((r) => r.value === row.role)
+        ? row.role
+        : ROLES.STAFF,
+      is_active: row.is_active !== 0 && row.is_active !== false,
+      permissions: parsePermissions(row.permissions).filter((k) =>
+        allowedFeatureKeys.includes(k)
+      ),
     });
-    setEditingUserId(user.id);
+    setEditingUserId(row.id);
     setFormMessage(null);
     setOpen(true);
   };
@@ -242,7 +272,7 @@ export default function UserAccountPage() {
     {
       field: "role",
       headerName: "Role",
-      width: 140,
+      width: 150,
       valueFormatter: (value) => roleLabel(value),
     },
     {
@@ -253,7 +283,9 @@ export default function UserAccountPage() {
         <Chip
           size="small"
           label={params.value === 0 || params.value === false ? "Off" : "On"}
-          color={params.value === 0 || params.value === false ? "default" : "success"}
+          color={
+            params.value === 0 || params.value === false ? "default" : "success"
+          }
         />
       ),
     },
@@ -309,10 +341,19 @@ export default function UserAccountPage() {
     );
   });
 
-  const isStaff = form.role === ROLES.STAFF;
+  const showFeatureChecklist =
+    form.role === ROLES.STAFF || form.role === ROLES.ADMIN;
 
   return (
     <Box sx={{ p: 4 }}>
+      <Alert severity="info" sx={{ mb: 2 }}>
+        {isSuperAdmin(actor)
+          ? "You are Super Admin — you can create Admins and Staff, and assign any features."
+          : isAdmin(actor)
+            ? "You are Admin — you can create Staff under you and grant only features you have."
+            : "Limited access."}
+      </Alert>
+
       <Box
         sx={{
           display: "flex",
@@ -413,7 +454,7 @@ export default function UserAccountPage() {
                 fullWidth
                 required
               >
-                {ROLE_OPTIONS.map((opt) => (
+                {roleChoices.map((opt) => (
                   <MenuItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </MenuItem>
@@ -452,22 +493,55 @@ export default function UserAccountPage() {
                 autoComplete="new-password"
               />
 
-              {isStaff ? (
+              {form.role === ROLES.SUPER_ADMIN ? (
+                <Alert severity="info">
+                  Super Admin always has full access (all menus + delete + user
+                  management).
+                </Alert>
+              ) : null}
+
+              {form.role === ROLES.ADMIN ? (
+                <Alert severity="info">
+                  Admins can create Staff and manage only the staff they create.
+                  They also get User Accounts access by role.
+                </Alert>
+              ) : null}
+
+              {showFeatureChecklist ? (
                 <Box>
                   <Typography fontWeight={700} sx={{ mb: 1 }}>
                     Feature access
                   </Typography>
-                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
-                    <Button size="small" variant="outlined" onClick={() => applyPreset("admin")}>
-                      Admin preset
-                    </Button>
-                    <Button size="small" variant="outlined" onClick={() => applyPreset("operator")}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    flexWrap="wrap"
+                    useFlexGap
+                    sx={{ mb: 1.5 }}
+                  >
+                    {isSuperAdmin(actor) ||
+                    allowedFeatureKeys.length >= PRESETS.admin.length ? (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => applyPreset("admin")}
+                      >
+                        Admin preset
+                      </Button>
+                    ) : null}
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => applyPreset("operator")}
+                    >
                       Operator preset
                     </Button>
                     <Button
                       size="small"
                       variant="text"
-                      onClick={() => setForm((p) => ({ ...p, permissions: [] }))}
+                      onClick={() =>
+                        setForm((p) => ({ ...p, permissions: [] }))
+                      }
                     >
                       Clear
                     </Button>
@@ -496,11 +570,7 @@ export default function UserAccountPage() {
                     </Box>
                   ))}
                 </Box>
-              ) : (
-                <Alert severity="info">
-                  Super Admin always has full access (all menus + delete + user management).
-                </Alert>
-              )}
+              ) : null}
             </Stack>
           </DialogContent>
           <DialogActions>
